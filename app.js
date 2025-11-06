@@ -44,7 +44,7 @@ const categoryEmojis = {
 // Sound effects
 let soundEnabled = true;
 const popSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTcIGWi77eefTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQUrgs7y2Yk3CBlou+3nn00QDFCn4/C2YxwGOJLX8sx5LAUkd8fw3ZBAC'); // Pop sound
-const ambientSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'); // Garden ambient (birds chirping)
+const ambientSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2457/2457-preview.mp3'); // Peaceful breeze and nature
 ambientSound.loop = true;
 ambientSound.volume = 0.3;
 
