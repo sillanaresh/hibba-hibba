@@ -219,39 +219,25 @@ async function loadDrawings() {
             return;
         }
 
-        // Display drawings in scrolling rows
-        const itemsPerRow = Math.ceil(window.innerWidth / 100); // Approximate items per row
+        // Display drawings in grid
+        drawings.forEach(drawing => {
+            const card = document.createElement('div');
+            card.className = 'drawing-card';
 
-        for (let i = 0; i < drawings.length; i += itemsPerRow) {
-            const rowDrawings = drawings.slice(i, i + itemsPerRow);
+            const categoryTag = document.createElement('div');
+            categoryTag.className = 'category-tag';
+            categoryTag.textContent = categoryEmojis[drawing.category];
 
-            const row = document.createElement('div');
-            row.className = 'garden-row';
+            const img = document.createElement('img');
+            img.src = drawing.imageData;
+            img.width = 80;
+            img.height = 80;
+            img.style.borderRadius = '8px';
 
-            // Duplicate entire row for infinite scroll effect (seamless loop)
-            const duplicatedDrawings = [...rowDrawings, ...rowDrawings];
-
-            duplicatedDrawings.forEach(drawing => {
-                const card = document.createElement('div');
-                card.className = 'drawing-card';
-
-                const categoryTag = document.createElement('div');
-                categoryTag.className = 'category-tag';
-                categoryTag.textContent = categoryEmojis[drawing.category];
-
-                const img = document.createElement('img');
-                img.src = drawing.imageData;
-                img.width = 80;
-                img.height = 80;
-                img.style.borderRadius = '8px';
-
-                card.appendChild(categoryTag);
-                card.appendChild(img);
-                row.appendChild(card);
-            });
-
-            gardenGrid.appendChild(row);
-        }
+            card.appendChild(categoryTag);
+            card.appendChild(img);
+            gardenGrid.appendChild(card);
+        });
     } catch (error) {
         console.error('Error loading drawings:', error);
         gardenGrid.innerHTML = '<div class="empty-state"><p>Unable to load drawings. Please refresh the page.</p></div>';

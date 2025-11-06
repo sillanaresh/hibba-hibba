@@ -91,30 +91,14 @@ header h1 {
 }
 
 .garden-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px;
+    row-gap: 20px;
     padding: 15px;
     background: rgba(255, 255, 255, 0.4);
     border-radius: 20px;
     min-height: 200px;
-    overflow: hidden;
-}
-
-.garden-row {
-    display: flex;
-    gap: 10px;
-    animation: scrollLeft 30s linear infinite;
-    will-change: transform;
-}
-
-@keyframes scrollLeft {
-    0% {
-        transform: translateX(-50%);
-    }
-    100% {
-        transform: translateX(0);
-    }
 }
 
 .drawing-card {
