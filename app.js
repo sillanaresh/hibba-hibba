@@ -225,11 +225,11 @@ async function loadDrawings() {
         for (let i = 0; i < drawings.length; i += itemsPerRow) {
             const rowDrawings = drawings.slice(i, i + itemsPerRow);
 
-            // Duplicate drawings for infinite scroll effect
-            const duplicatedDrawings = [...rowDrawings, ...rowDrawings];
-
             const row = document.createElement('div');
             row.className = 'garden-row';
+
+            // Duplicate entire row for infinite scroll effect (seamless loop)
+            const duplicatedDrawings = [...rowDrawings, ...rowDrawings];
 
             duplicatedDrawings.forEach(drawing => {
                 const card = document.createElement('div');
@@ -394,9 +394,6 @@ document.getElementById('addEmojiBtn').addEventListener('click', () => {
         alert(`Added ${selectedEmoji} as "${keyName}"!`);
         container.innerHTML = '';
         emojiPicker = null;
-
-        // Auto-close settings after adding
-        setTimeout(() => closeSettingsModal(), 500);
     });
 });
 
@@ -429,9 +426,6 @@ window.removeEmoji = function(key) {
         localStorage.setItem('categoryEmojis', JSON.stringify(categoryEmojis));
 
         alert('Emoji removed!');
-
-        // Auto-close settings after removing
-        setTimeout(() => closeSettingsModal(), 500);
     }
 };
 
@@ -466,9 +460,6 @@ document.getElementById('clearGardenBtn').addEventListener('click', async () => 
         // Reload garden
         await loadDrawings();
         alert('Garden cleared successfully!');
-
-        // Auto-close settings
-        setTimeout(() => closeSettingsModal(), 500);
     } catch (error) {
         console.error('Error clearing garden:', error);
         alert('Error clearing garden. Check console.');
@@ -513,9 +504,6 @@ document.getElementById('removeLastNBtn').addEventListener('click', async () => 
         await loadDrawings();
         document.getElementById('removeLastN').value = '';
         alert(`Removed last ${n} drawing(s)!`);
-
-        // Auto-close settings
-        setTimeout(() => closeSettingsModal(), 500);
     } catch (error) {
         console.error('Error removing drawings:', error);
         alert('Error removing drawings. Check console.');
