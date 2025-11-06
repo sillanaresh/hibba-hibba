@@ -111,10 +111,83 @@ header h1 {
     flex-direction: column;
     align-items: center;
     gap: 2px;
+    position: relative;
+    animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes popIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .drawing-card:hover {
-    transform: scale(1.05);
+    animation: wiggle 0.5s ease;
+    animation-iteration-count: infinite;
+}
+
+@keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-3deg); }
+    75% { transform: rotate(3deg); }
+}
+
+.react-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: white;
+    border: 1px solid #FFE8F0;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.drawing-card:hover .react-btn {
+    display: flex;
+}
+
+.react-btn:hover {
+    transform: scale(1.2);
+    background: #FFE8F0;
+}
+
+.react-btn.reacted {
+    background: #FF6B9D;
+    color: white;
+    display: flex;
+}
+
+.react-count {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background: rgba(255, 107, 157, 0.9);
+    color: white;
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    display: none;
+}
+
+.react-count.visible {
+    display: block;
 }
 
 .drawing-card img {
@@ -285,11 +358,10 @@ header h1 {
     white-space: nowrap;
 }
 
-/* Settings Icon - Fixed Top Right */
-.settings-icon {
+/* Fixed Icons - Top Right */
+.settings-icon, .sound-toggle {
     position: fixed;
     top: 20px;
-    right: 20px;
     width: 50px;
     height: 50px;
     background: white;
@@ -302,10 +374,27 @@ header h1 {
     transition: all 0.3s ease;
 }
 
-.settings-icon:hover {
-    transform: rotate(90deg) scale(1.1);
+.settings-icon {
+    right: 20px;
+}
+
+.sound-toggle {
+    right: 80px;
+}
+
+.settings-icon:hover, .sound-toggle:hover {
+    transform: scale(1.1);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
     border-color: #FFD6E8;
+}
+
+.settings-icon:hover {
+    transform: rotate(90deg) scale(1.1);
+}
+
+.sound-toggle.muted {
+    opacity: 0.5;
+    background: #f0f0f0;
 }
 
 /* Settings Modal */

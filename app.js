@@ -1,6 +1,9 @@
 // Firebase configuration will go here
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, limit, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+// Load confetti library
+import confetti from 'https://cdn.skypack.dev/canvas-confetti';
 
 // Firebase config - Connected to your happy-garden project!
 const firebaseConfig = {
@@ -37,6 +40,38 @@ const categoryEmojis = {
     fish: '🐟',
     duck: '🦆'
 };
+
+// Sound effects
+let soundEnabled = true;
+const popSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTcIGWi77eefTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQUrgs7y2Yk3CBlou+3nn00QDFCn4/C2YxwGOJLX8sx5LAUkd8fw3ZBAC'); // Pop sound
+const ambientSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'); // Garden ambient (birds chirping)
+ambientSound.loop = true;
+ambientSound.volume = 0.3;
+
+// Sound toggle
+document.getElementById('soundToggle').addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('soundToggle');
+
+    if (soundEnabled) {
+        btn.textContent = '🔊';
+        btn.classList.remove('muted');
+        ambientSound.play().catch(() => {}); // Start ambient if enabled
+    } else {
+        btn.textContent = '🔇';
+        btn.classList.add('muted');
+        ambientSound.pause();
+    }
+});
+
+// Auto-play ambient sound on first interaction
+let ambientStarted = false;
+document.body.addEventListener('click', () => {
+    if (!ambientStarted && soundEnabled) {
+        ambientSound.play().catch(() => {});
+        ambientStarted = true;
+    }
+}, { once: true });
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -180,6 +215,19 @@ async function submitDrawing() {
             console.log('Drawing saved to localStorage (Firebase not configured)');
         }
 
+        // Play pop sound
+        if (soundEnabled) {
+            popSound.currentTime = 0;
+            popSound.play().catch(() => {});
+        }
+
+        // Confetti explosion!
+        confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+
         // Reload drawings and close modal
         await loadDrawings();
         closeModal();
@@ -220,9 +268,10 @@ async function loadDrawings() {
         }
 
         // Display drawings in grid
-        drawings.forEach(drawing => {
+        drawings.forEach((drawing, index) => {
             const card = document.createElement('div');
             card.className = 'drawing-card';
+            card.dataset.drawingId = drawing.id || index;
 
             const categoryTag = document.createElement('div');
             categoryTag.className = 'category-tag';
@@ -234,13 +283,88 @@ async function loadDrawings() {
             img.height = 80;
             img.style.borderRadius = '8px';
 
+            // React button
+            const reactBtn = document.createElement('button');
+            reactBtn.className = 'react-btn';
+            reactBtn.innerHTML = '❤️';
+            reactBtn.title = 'React with love';
+
+            // Check if already reacted (from localStorage)
+            const reactions = JSON.parse(localStorage.getItem('reactions') || '{}');
+            const drawingKey = drawing.id || index;
+            const reactionCount = drawing.reactions || reactions[drawingKey] || 0;
+            const hasReacted = localStorage.getItem(`reacted_${drawingKey}`) === 'true';
+
+            if (hasReacted) {
+                reactBtn.classList.add('reacted');
+            }
+
+            reactBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await handleReaction(drawing, drawingKey, reactBtn, reactCount);
+            });
+
+            // React count
+            const reactCount = document.createElement('div');
+            reactCount.className = 'react-count';
+            if (reactionCount > 0) {
+                reactCount.textContent = reactionCount;
+                reactCount.classList.add('visible');
+            }
+
             card.appendChild(categoryTag);
             card.appendChild(img);
+            card.appendChild(reactBtn);
+            card.appendChild(reactCount);
             gardenGrid.appendChild(card);
         });
     } catch (error) {
         console.error('Error loading drawings:', error);
         gardenGrid.innerHTML = '<div class="empty-state"><p>Unable to load drawings. Please refresh the page.</p></div>';
+    }
+}
+
+// Handle reaction (heart button)
+async function handleReaction(drawing, drawingKey, reactBtn, reactCount) {
+    const hasReacted = localStorage.getItem(`reacted_${drawingKey}`) === 'true';
+
+    if (hasReacted) {
+        // Un-react
+        localStorage.removeItem(`reacted_${drawingKey}`);
+        reactBtn.classList.remove('reacted');
+
+        // Update count
+        const reactions = JSON.parse(localStorage.getItem('reactions') || '{}');
+        reactions[drawingKey] = Math.max(0, (reactions[drawingKey] || 1) - 1);
+        localStorage.setItem('reactions', JSON.stringify(reactions));
+
+        if (reactions[drawingKey] === 0) {
+            reactCount.classList.remove('visible');
+        } else {
+            reactCount.textContent = reactions[drawingKey];
+        }
+    } else {
+        // React
+        localStorage.setItem(`reacted_${drawingKey}`, 'true');
+        reactBtn.classList.add('reacted');
+
+        // Update count
+        const reactions = JSON.parse(localStorage.getItem('reactions') || '{}');
+        reactions[drawingKey] = (reactions[drawingKey] || 0) + 1;
+        localStorage.setItem('reactions', JSON.stringify(reactions));
+
+        reactCount.textContent = reactions[drawingKey];
+        reactCount.classList.add('visible');
+
+        // Mini confetti
+        confetti({
+            particleCount: 20,
+            spread: 40,
+            origin: {
+                x: event.clientX / window.innerWidth,
+                y: event.clientY / window.innerHeight
+            }
+        });
     }
 }
 
