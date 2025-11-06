@@ -228,9 +228,9 @@ async function loadDrawings() {
 
             const img = document.createElement('img');
             img.src = drawing.imageData;
-            img.width = 120;
-            img.height = 120;
-            img.style.borderRadius = '10px';
+            img.width = 80;
+            img.height = 80;
+            img.style.borderRadius = '8px';
 
             card.appendChild(categoryTag);
             card.appendChild(img);

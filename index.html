@@ -8,27 +8,25 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
+        <!-- Header with Category Buttons -->
         <header>
-            <h1>🌸 Happy Garden 🌸</h1>
-            <p class="subtitle">Draw something cute and add it to our garden!</p>
+            <div class="header-left">
+                <h1>Fun Garden</h1>
+                <p class="subtitle">Draw something cute and add it to our garden!</p>
+            </div>
+            <!-- Category Selection moved to top-right -->
+            <div class="category-buttons">
+                <button class="category-btn" data-category="cat">
+                    <span class="emoji">🐱</span>
+                </button>
+                <button class="category-btn" data-category="dog">
+                    <span class="emoji">🐶</span>
+                </button>
+                <button class="category-btn" data-category="flower">
+                    <span class="emoji">🌸</span>
+                </button>
+            </div>
         </header>
-
-        <!-- Category Selection -->
-        <div class="category-buttons">
-            <button class="category-btn" data-category="cat">
-                <span class="emoji">🐱</span>
-                <span class="label">Cat</span>
-            </button>
-            <button class="category-btn" data-category="dog">
-                <span class="emoji">🐶</span>
-                <span class="label">Dog</span>
-            </button>
-            <button class="category-btn" data-category="flower">
-                <span class="emoji">🌸</span>
-                <span class="label">Flower</span>
-            </button>
-        </div>
 
         <!-- Garden Grid -->
         <div class="garden">
