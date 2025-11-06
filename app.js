@@ -33,7 +33,9 @@ let currentCategory = '';
 const categoryEmojis = {
     cat: '🐱',
     dog: '🐶',
-    flower: '🌸'
+    flower: '🌸',
+    fish: '🐟',
+    duck: '🦆'
 };
 
 // Initialize
