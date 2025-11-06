@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Garden 🌸</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🌸 Happy Garden 🌸</h1>
+            <p class="subtitle">Draw something cute and add it to our garden!</p>
+        </header>
+
+        <!-- Category Selection -->
+        <div class="category-buttons">
+            <button class="category-btn" data-category="cat">
+                <span class="emoji">🐱</span>
+                <span class="label">Cat</span>
+            </button>
+            <button class="category-btn" data-category="dog">
+                <span class="emoji">🐶</span>
+                <span class="label">Dog</span>
+            </button>
+            <button class="category-btn" data-category="flower">
+                <span class="emoji">🌸</span>
+                <span class="label">Flower</span>
+            </button>
+        </div>
+
+        <!-- Garden Grid -->
+        <div class="garden">
+            <h2>Our Garden</h2>
+            <div id="gardenGrid" class="garden-grid">
+                <!-- Drawings will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Drawing Modal -->
+    <div id="drawingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Draw your <span id="currentCategory"></span> <span id="categoryEmoji"></span></h3>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="drawingCanvas" width="120" height="120"></canvas>
+            </div>
+
+            <div class="color-palette">
+                <button class="color-btn active" data-color="#2D3047" style="background: #2D3047;" title="Black"></button>
+                <button class="color-btn" data-color="#FF6B9D" style="background: #FF6B9D;" title="Pink"></button>
+                <button class="color-btn" data-color="#93E1D8" style="background: #93E1D8;" title="Mint"></button>
+                <button class="color-btn" data-color="#FFA69E" style="background: #FFA69E;" title="Peach"></button>
+                <button class="color-btn" data-color="#B8D4E8" style="background: #B8D4E8;" title="Sky Blue"></button>
+                <button class="eraser-btn" data-color="#FFFFFF" title="Eraser">✏️ Eraser</button>
+            </div>
+
+            <div class="modal-actions">
+                <button id="clearCanvas" class="btn-secondary">Clear</button>
+                <button id="submitDrawing" class="btn-primary">Add to Garden 🌱</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
