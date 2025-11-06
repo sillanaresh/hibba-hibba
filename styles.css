@@ -101,15 +101,14 @@ header h1 {
 }
 
 .drawing-card {
-    background: white;
-    border-radius: 10px;
-    padding: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    background: transparent;
+    border-radius: 8px;
+    padding: 0;
     transition: transform 0.3s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 2px;
 }
 
 .drawing-card:hover {
@@ -117,12 +116,13 @@ header h1 {
 }
 
 .drawing-card img {
-    border: 1px solid #F0E5D8;
+    border: none;
     border-radius: 8px;
+    display: block;
 }
 
 .drawing-card .category-tag {
-    font-size: 1rem;
+    font-size: 0.9rem;
 }
 
 /* Modal */
@@ -147,8 +147,8 @@ header h1 {
 .modal-content {
     background: white;
     border-radius: 25px;
-    padding: 30px;
-    max-width: 500px;
+    padding: 25px;
+    max-width: 360px;
     width: 90%;
     box-shadow: 0 10px 50px rgba(0, 0, 0, 0.2);
 }
@@ -157,12 +157,12 @@ header h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .modal-header h3 {
     color: #2D3047;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
 }
 
 .close-btn {
@@ -178,32 +178,24 @@ header h1 {
     color: #2D3047;
 }
 
-/* Canvas */
-.canvas-container {
+/* Drawing Area - Side by Side Layout */
+.drawing-area {
     display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
+    gap: 15px;
+    margin-bottom: 15px;
+    align-items: center;
 }
 
-#drawingCanvas {
-    border: 3px solid #FFD6E8;
-    border-radius: 15px;
-    cursor: crosshair;
-    background: white;
-}
-
-/* Color Palette */
+/* Color Palette - Now Vertical on Left */
 .color-palette {
     display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .color-btn, .eraser-btn {
-    width: 40px;
-    height: 40px;
+    width: 35px;
+    height: 35px;
     border-radius: 50%;
     border: 3px solid transparent;
     cursor: pointer;
@@ -222,10 +214,23 @@ header h1 {
 .eraser-btn {
     background: white;
     border: 3px solid #6B728E;
-    font-size: 1.2rem;
+    font-size: 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* Canvas - Now Bigger */
+.canvas-container {
+    display: flex;
+    justify-content: center;
+}
+
+#drawingCanvas {
+    border: 3px solid #FFD6E8;
+    border-radius: 15px;
+    cursor: crosshair;
+    background: white;
 }
 
 /* Buttons */

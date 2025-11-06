@@ -11,7 +11,7 @@
         <!-- Header with Category Buttons -->
         <header>
             <div class="header-left">
-                <h1>Fun Garden</h1>
+                <h1>Fun Garden 😝</h1>
                 <p class="subtitle">Draw something cute and add it to our garden!</p>
             </div>
             <!-- Category Selection moved to top-right -->
@@ -45,17 +45,18 @@
                 <button class="close-btn" id="closeModal">&times;</button>
             </div>
 
-            <div class="canvas-container">
-                <canvas id="drawingCanvas" width="120" height="120"></canvas>
-            </div>
-
-            <div class="color-palette">
-                <button class="color-btn active" data-color="#2D3047" style="background: #2D3047;" title="Black"></button>
-                <button class="color-btn" data-color="#FF6B9D" style="background: #FF6B9D;" title="Pink"></button>
-                <button class="color-btn" data-color="#93E1D8" style="background: #93E1D8;" title="Mint"></button>
-                <button class="color-btn" data-color="#FFA69E" style="background: #FFA69E;" title="Peach"></button>
-                <button class="color-btn" data-color="#B8D4E8" style="background: #B8D4E8;" title="Sky Blue"></button>
-                <button class="eraser-btn" data-color="#FFFFFF" title="Eraser">✏️ Eraser</button>
+            <div class="drawing-area">
+                <div class="color-palette">
+                    <button class="color-btn active" data-color="#2D3047" style="background: #2D3047;" title="Black"></button>
+                    <button class="color-btn" data-color="#FF6B9D" style="background: #FF6B9D;" title="Pink"></button>
+                    <button class="color-btn" data-color="#93E1D8" style="background: #93E1D8;" title="Mint"></button>
+                    <button class="color-btn" data-color="#FFA69E" style="background: #FFA69E;" title="Peach"></button>
+                    <button class="color-btn" data-color="#B8D4E8" style="background: #B8D4E8;" title="Sky Blue"></button>
+                    <button class="eraser-btn" data-color="#FFFFFF" title="Eraser">✏️</button>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="drawingCanvas" width="200" height="200"></canvas>
+                </div>
             </div>
 
             <div class="modal-actions">
