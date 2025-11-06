@@ -219,25 +219,39 @@ async function loadDrawings() {
             return;
         }
 
-        // Display drawings
-        drawings.forEach(drawing => {
-            const card = document.createElement('div');
-            card.className = 'drawing-card';
+        // Display drawings in scrolling rows
+        const itemsPerRow = Math.ceil(window.innerWidth / 100); // Approximate items per row
 
-            const categoryTag = document.createElement('div');
-            categoryTag.className = 'category-tag';
-            categoryTag.textContent = categoryEmojis[drawing.category];
+        for (let i = 0; i < drawings.length; i += itemsPerRow) {
+            const rowDrawings = drawings.slice(i, i + itemsPerRow);
 
-            const img = document.createElement('img');
-            img.src = drawing.imageData;
-            img.width = 80;
-            img.height = 80;
-            img.style.borderRadius = '8px';
+            // Duplicate drawings for infinite scroll effect
+            const duplicatedDrawings = [...rowDrawings, ...rowDrawings];
 
-            card.appendChild(categoryTag);
-            card.appendChild(img);
-            gardenGrid.appendChild(card);
-        });
+            const row = document.createElement('div');
+            row.className = 'garden-row';
+
+            duplicatedDrawings.forEach(drawing => {
+                const card = document.createElement('div');
+                card.className = 'drawing-card';
+
+                const categoryTag = document.createElement('div');
+                categoryTag.className = 'category-tag';
+                categoryTag.textContent = categoryEmojis[drawing.category];
+
+                const img = document.createElement('img');
+                img.src = drawing.imageData;
+                img.width = 80;
+                img.height = 80;
+                img.style.borderRadius = '8px';
+
+                card.appendChild(categoryTag);
+                card.appendChild(img);
+                row.appendChild(card);
+            });
+
+            gardenGrid.appendChild(row);
+        }
     } catch (error) {
         console.error('Error loading drawings:', error);
         gardenGrid.innerHTML = '<div class="empty-state"><p>Unable to load drawings. Please refresh the page.</p></div>';
@@ -291,6 +305,14 @@ const ADMIN_PASSWORD = '7Maruthi';
 // Settings Modal Controls
 document.getElementById('settingsBtn').addEventListener('click', openSettings);
 document.getElementById('closeSettings').addEventListener('click', closeSettingsModal);
+document.getElementById('closeSettingsBtn').addEventListener('click', closeSettingsModal);
+
+// Click outside modal to close
+document.getElementById('settingsModal').addEventListener('click', (e) => {
+    if (e.target.id === 'settingsModal') {
+        closeSettingsModal();
+    }
+});
 
 function openSettings() {
     const password = prompt('Enter admin password:');
@@ -372,6 +394,9 @@ document.getElementById('addEmojiBtn').addEventListener('click', () => {
         alert(`Added ${selectedEmoji} as "${keyName}"!`);
         container.innerHTML = '';
         emojiPicker = null;
+
+        // Auto-close settings after adding
+        setTimeout(() => closeSettingsModal(), 500);
     });
 });
 
@@ -404,6 +429,9 @@ window.removeEmoji = function(key) {
         localStorage.setItem('categoryEmojis', JSON.stringify(categoryEmojis));
 
         alert('Emoji removed!');
+
+        // Auto-close settings after removing
+        setTimeout(() => closeSettingsModal(), 500);
     }
 };
 
@@ -438,6 +466,9 @@ document.getElementById('clearGardenBtn').addEventListener('click', async () => 
         // Reload garden
         await loadDrawings();
         alert('Garden cleared successfully!');
+
+        // Auto-close settings
+        setTimeout(() => closeSettingsModal(), 500);
     } catch (error) {
         console.error('Error clearing garden:', error);
         alert('Error clearing garden. Check console.');
@@ -482,6 +513,9 @@ document.getElementById('removeLastNBtn').addEventListener('click', async () => 
         await loadDrawings();
         document.getElementById('removeLastN').value = '';
         alert(`Removed last ${n} drawing(s)!`);
+
+        // Auto-close settings
+        setTimeout(() => closeSettingsModal(), 500);
     } catch (error) {
         console.error('Error removing drawings:', error);
         alert('Error removing drawings. Check console.');
