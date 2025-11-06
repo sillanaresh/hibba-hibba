@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Settings Icon - Fixed Top Right -->
+    <button id="settingsBtn" class="settings-icon" title="Admin Settings">⚙️</button>
+
     <div class="container">
         <!-- Header with Category Buttons -->
         <header>
@@ -71,6 +74,53 @@
             </div>
         </div>
     </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content settings-content">
+            <div class="modal-header">
+                <h3>⚙️ Admin Settings</h3>
+                <button class="close-btn" id="closeSettings">&times;</button>
+            </div>
+
+            <div class="settings-body">
+                <!-- Add Emoji -->
+                <div class="settings-section">
+                    <h4>➕ Add New Emoji Category</h4>
+                    <button id="addEmojiBtn" class="btn-primary">Pick Emoji</button>
+                    <div id="emojiPickerContainer"></div>
+                </div>
+
+                <!-- Remove Emoji -->
+                <div class="settings-section">
+                    <h4>🗑️ Remove Emoji Category</h4>
+                    <div id="emojiList" class="emoji-list">
+                        <!-- Current emojis will appear here -->
+                    </div>
+                </div>
+
+                <!-- Clear Garden -->
+                <div class="settings-section">
+                    <h4>🧹 Clear Entire Garden</h4>
+                    <button id="clearGardenBtn" class="btn-danger">Delete All Drawings</button>
+                </div>
+
+                <!-- Remove Last N -->
+                <div class="settings-section">
+                    <h4>⏪ Remove Last N Drawings</h4>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="removeLastN" min="1" placeholder="Enter number" style="flex: 1; padding: 10px; border: 2px solid #FFD6E8; border-radius: 10px;">
+                        <button id="removeLastNBtn" class="btn-secondary">Remove</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emoji Picker Library -->
+    <script type="module">
+        import 'https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js';
+    </script>
 
     <!-- Firebase SDK -->
     <script type="module" src="app.js"></script>

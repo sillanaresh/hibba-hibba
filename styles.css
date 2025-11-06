@@ -94,17 +94,9 @@ header h1 {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
     gap: 10px;
-    row-gap: 25px;
+    row-gap: 20px;
     padding: 15px;
-    background:
-        repeating-linear-gradient(
-            to bottom,
-            transparent,
-            transparent 105px,
-            #F0E5D8 105px,
-            #F0E5D8 107px
-        ),
-        rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.4);
     border-radius: 20px;
     min-height: 200px;
 }
@@ -288,6 +280,108 @@ header h1 {
 
 .empty-state p {
     font-size: 1.2rem;
+}
+
+/* Settings Icon - Fixed Top Right */
+.settings-icon {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background: white;
+    border: 2px solid #FFD6E8;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 999;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.settings-icon:hover {
+    transform: rotate(90deg) scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    border-color: #FFB4D1;
+}
+
+/* Settings Modal */
+.settings-content {
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.settings-body {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.settings-section {
+    padding: 20px;
+    background: rgba(255, 246, 240, 0.5);
+    border-radius: 15px;
+    border: 2px solid #FFD6E8;
+}
+
+.settings-section h4 {
+    margin: 0 0 15px 0;
+    color: #2D3047;
+    font-size: 1.1rem;
+}
+
+.emoji-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.emoji-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    background: white;
+    border: 2px solid #FFD6E8;
+    border-radius: 10px;
+    font-size: 1.2rem;
+}
+
+.emoji-item button {
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.emoji-item button:hover {
+    background: #cc0000;
+}
+
+.btn-danger {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    background: #ff4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #cc0000;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(255, 68, 68, 0.4);
+}
+
+#emojiPickerContainer {
+    margin-top: 15px;
 }
 
 /* Responsive */

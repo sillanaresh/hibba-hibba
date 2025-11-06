@@ -1,6 +1,6 @@
 // Firebase configuration will go here
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, addDoc, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 // Firebase config - Connected to your happy-garden project!
 const firebaseConfig = {
@@ -283,3 +283,221 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// ===== ADMIN SETTINGS PANEL =====
+
+const ADMIN_PASSWORD = '7Maruthi';
+
+// Settings Modal Controls
+document.getElementById('settingsBtn').addEventListener('click', openSettings);
+document.getElementById('closeSettings').addEventListener('click', closeSettingsModal);
+
+function openSettings() {
+    const password = prompt('Enter admin password:');
+    if (password === ADMIN_PASSWORD) {
+        document.getElementById('settingsModal').classList.add('active');
+        loadEmojiList();
+    } else if (password !== null) {
+        alert('Incorrect password!');
+    }
+}
+
+function closeSettingsModal() {
+    document.getElementById('settingsModal').classList.remove('active');
+}
+
+// Load current emoji list for removal
+function loadEmojiList() {
+    const emojiList = document.getElementById('emojiList');
+    emojiList.innerHTML = '';
+
+    Object.entries(categoryEmojis).forEach(([key, emoji]) => {
+        const item = document.createElement('div');
+        item.className = 'emoji-item';
+        item.innerHTML = `
+            <span>${emoji}</span>
+            <span>${key}</span>
+            <button onclick="removeEmoji('${key}')">Remove</button>
+        `;
+        emojiList.appendChild(item);
+    });
+}
+
+// Add new emoji
+let emojiPicker = null;
+document.getElementById('addEmojiBtn').addEventListener('click', () => {
+    const container = document.getElementById('emojiPickerContainer');
+
+    if (emojiPicker) {
+        container.innerHTML = '';
+        emojiPicker = null;
+        return;
+    }
+
+    emojiPicker = document.createElement('emoji-picker');
+    container.appendChild(emojiPicker);
+
+    emojiPicker.addEventListener('emoji-click', (event) => {
+        const selectedEmoji = event.detail.unicode;
+
+        // Check if emoji already exists
+        const exists = Object.values(categoryEmojis).includes(selectedEmoji);
+        if (exists) {
+            alert('This emoji is already added!');
+            return;
+        }
+
+        // Generate a key name (use emoji as key or ask user)
+        const keyName = prompt('Enter a name for this category:');
+        if (!keyName) return;
+
+        // Check if key already exists
+        if (categoryEmojis[keyName.toLowerCase()]) {
+            alert('This category name already exists!');
+            return;
+        }
+
+        // Add to categoryEmojis
+        categoryEmojis[keyName.toLowerCase()] = selectedEmoji;
+
+        // Add button to UI
+        addCategoryButton(keyName.toLowerCase(), selectedEmoji);
+
+        // Refresh emoji list
+        loadEmojiList();
+
+        // Save to localStorage
+        localStorage.setItem('categoryEmojis', JSON.stringify(categoryEmojis));
+
+        alert(`Added ${selectedEmoji} as "${keyName}"!`);
+        container.innerHTML = '';
+        emojiPicker = null;
+    });
+});
+
+// Add category button dynamically
+function addCategoryButton(category, emoji) {
+    const categoryButtons = document.querySelector('.category-buttons');
+    const btn = document.createElement('button');
+    btn.className = 'category-btn';
+    btn.dataset.category = category;
+    btn.innerHTML = `<span class="emoji">${emoji}</span>`;
+    btn.addEventListener('click', () => {
+        openDrawingModal(category);
+    });
+    categoryButtons.appendChild(btn);
+}
+
+// Remove emoji
+window.removeEmoji = function(key) {
+    if (confirm(`Remove ${categoryEmojis[key]} (${key})?`)) {
+        delete categoryEmojis[key];
+
+        // Remove button from UI
+        const btn = document.querySelector(`[data-category="${key}"]`);
+        if (btn) btn.remove();
+
+        // Refresh emoji list
+        loadEmojiList();
+
+        // Save to localStorage
+        localStorage.setItem('categoryEmojis', JSON.stringify(categoryEmojis));
+
+        alert('Emoji removed!');
+    }
+};
+
+// Clear entire garden
+document.getElementById('clearGardenBtn').addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to DELETE ALL DRAWINGS? This cannot be undone!')) {
+        return;
+    }
+
+    if (!confirm('FINAL WARNING: This will permanently delete everything. Continue?')) {
+        return;
+    }
+
+    try {
+        if (db) {
+            // Delete from Firebase
+            const q = query(collection(db, 'drawings'));
+            const querySnapshot = await getDocs(q);
+
+            const deletePromises = [];
+            querySnapshot.forEach((docSnapshot) => {
+                deletePromises.push(deleteDoc(doc(db, 'drawings', docSnapshot.id)));
+            });
+
+            await Promise.all(deletePromises);
+            console.log('All drawings deleted from Firebase');
+        } else {
+            // Clear localStorage
+            localStorage.removeItem('drawings');
+        }
+
+        // Reload garden
+        await loadDrawings();
+        alert('Garden cleared successfully!');
+    } catch (error) {
+        console.error('Error clearing garden:', error);
+        alert('Error clearing garden. Check console.');
+    }
+});
+
+// Remove last N drawings
+document.getElementById('removeLastNBtn').addEventListener('click', async () => {
+    const n = parseInt(document.getElementById('removeLastN').value);
+
+    if (!n || n < 1) {
+        alert('Please enter a valid number!');
+        return;
+    }
+
+    if (!confirm(`Remove the last ${n} drawing(s)?`)) {
+        return;
+    }
+
+    try {
+        if (db) {
+            // Get last N drawings from Firebase
+            const q = query(collection(db, 'drawings'), orderBy('timestamp', 'desc'), limit(n));
+            const querySnapshot = await getDocs(q);
+
+            const deletePromises = [];
+            querySnapshot.forEach((docSnapshot) => {
+                deletePromises.push(deleteDoc(doc(db, 'drawings', docSnapshot.id)));
+            });
+
+            await Promise.all(deletePromises);
+            console.log(`Last ${n} drawings deleted`);
+        } else {
+            // Remove from localStorage
+            let drawings = JSON.parse(localStorage.getItem('drawings') || '[]');
+            drawings.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            drawings = drawings.slice(n);
+            localStorage.setItem('drawings', JSON.stringify(drawings));
+        }
+
+        // Reload garden
+        await loadDrawings();
+        document.getElementById('removeLastN').value = '';
+        alert(`Removed last ${n} drawing(s)!`);
+    } catch (error) {
+        console.error('Error removing drawings:', error);
+        alert('Error removing drawings. Check console.');
+    }
+});
+
+// Load saved emojis from localStorage on startup
+const savedEmojis = localStorage.getItem('categoryEmojis');
+if (savedEmojis) {
+    const loadedEmojis = JSON.parse(savedEmojis);
+    Object.assign(categoryEmojis, loadedEmojis);
+
+    // Add any new buttons that aren't already in HTML
+    Object.entries(loadedEmojis).forEach(([key, emoji]) => {
+        if (!document.querySelector(`[data-category="${key}"]`)) {
+            addCategoryButton(key, emoji);
+        }
+    });
+}
