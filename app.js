@@ -55,6 +55,7 @@ let rainbowMode = false;
 let sparkleMode = false;
 let rainbowHue = 0;
 let canvasHistory = [];
+let currentPreviewDrawing = null;
 
 const categoryEmojis = { ...DEFAULT_CATEGORY_EMOJIS };
 
@@ -108,6 +109,7 @@ function setupEventListeners() {
             document.querySelectorAll('.color-btn, .eraser-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentColor = getDrawColor(btn.dataset.color);
+            updateToolHint(btn.classList.contains('eraser-btn') ? 'Eraser selected' : `${btn.title} ink selected`);
         });
     });
 
@@ -124,6 +126,7 @@ function setupEventListeners() {
     document.getElementById('rainbowMode').addEventListener('click', toggleRainbowMode);
     document.getElementById('sparkleMode').addEventListener('click', toggleSparkleMode);
     document.getElementById('closePreview').addEventListener('click', closePreview);
+    document.getElementById('downloadSticker').addEventListener('click', downloadPreviewSticker);
     document.getElementById('exportGardenBtn').addEventListener('click', exportGardenBackup);
 
     document.querySelectorAll('.brush-btn').forEach(btn => {
@@ -131,6 +134,7 @@ function setupEventListeners() {
             document.querySelectorAll('.brush-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             brushSize = Number(btn.dataset.size);
+            updateToolHint(`${btn.title} selected`);
         });
     });
 
@@ -214,9 +218,13 @@ function draw(e) {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y);
 
     if (sparkleMode && Math.random() > 0.72) {
         drawSparkle(point);
+        ctx.beginPath();
+        ctx.moveTo(point.x, point.y);
     }
 }
 
@@ -249,12 +257,30 @@ function getStrokeColor() {
 }
 
 function drawSparkle(point) {
-    const oldFill = ctx.fillStyle;
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim();
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim();
+    const x = point.x + (Math.random() - 0.5) * 14;
+    const y = point.y + (Math.random() - 0.5) * 14;
+    const size = 3 + Math.random() * 2;
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 1.2;
+    ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.arc(point.x + (Math.random() - 0.5) * 12, point.y + (Math.random() - 0.5) * 12, 1.4, 0, Math.PI * 2);
+    ctx.moveTo(x - size, y);
+    ctx.lineTo(x + size, y);
+    ctx.moveTo(x, y - size);
+    ctx.lineTo(x, y + size);
+    ctx.moveTo(x - size * 0.65, y - size * 0.65);
+    ctx.lineTo(x + size * 0.65, y + size * 0.65);
+    ctx.moveTo(x + size * 0.65, y - size * 0.65);
+    ctx.lineTo(x - size * 0.65, y + size * 0.65);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, 1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = oldFill;
+    ctx.restore();
 }
 
 function saveCanvasState() {
@@ -279,6 +305,7 @@ function toggleRainbowMode() {
     const btn = document.getElementById('rainbowMode');
     btn.classList.toggle('active', rainbowMode);
     btn.setAttribute('aria-pressed', String(rainbowMode));
+    updateToolHint(rainbowMode ? 'Rainbow is on: your stroke changes color as you draw' : 'Rainbow is off: using the selected color');
 }
 
 function toggleSparkleMode() {
@@ -286,6 +313,14 @@ function toggleSparkleMode() {
     const btn = document.getElementById('sparkleMode');
     btn.classList.toggle('active', sparkleMode);
     btn.setAttribute('aria-pressed', String(sparkleMode));
+    updateToolHint(sparkleMode ? 'Sparkle is on: tiny star stamps appear while you draw' : 'Sparkle is off: clean brush strokes');
+}
+
+function updateToolHint(text) {
+    const hint = document.getElementById('toolHint');
+    hint.textContent = text;
+    hint.classList.add('is-changing');
+    setTimeout(() => hint.classList.remove('is-changing'), 240);
 }
 
 async function submitDrawing() {
@@ -590,6 +625,7 @@ function getStickerTilt(id = '') {
 }
 
 function openPreview(drawing) {
+    currentPreviewDrawing = drawing;
     document.getElementById('previewEmoji').textContent = getCategoryEmoji(drawing);
     document.getElementById('previewImage').src = drawing.imageData;
     document.getElementById('previewCaption').textContent = `${drawing.category} sticker from the garden`;
@@ -598,6 +634,20 @@ function openPreview(drawing) {
 
 function closePreview() {
     document.getElementById('previewModal').classList.remove('active');
+    currentPreviewDrawing = null;
+}
+
+async function downloadPreviewSticker() {
+    if (!currentPreviewDrawing?.imageData) return;
+
+    const blob = await (await fetch(currentPreviewDrawing.imageData)).blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const category = currentPreviewDrawing.category || 'garden';
+    link.href = url;
+    link.download = `fun-garden-${category}-sticker.png`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function getCategoryEmoji(drawing) {

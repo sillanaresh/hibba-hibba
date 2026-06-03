@@ -100,10 +100,21 @@ header {
 }
 
 header h1 {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
     font-size: 2rem;
     line-height: 1;
     letter-spacing: 0;
     overflow-wrap: anywhere;
+}
+
+.brand-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(37, 40, 61, 0.14);
+    flex: 0 0 auto;
 }
 
 .subtitle {
@@ -170,8 +181,9 @@ header h1 {
 }
 
 .garden-heading {
-    position: relative;
-    display: block;
+    display: grid;
+    gap: 10px;
+    justify-items: center;
     margin-bottom: 15px;
     text-align: center;
 }
@@ -191,17 +203,16 @@ header h1 {
     display: flex;
     gap: var(--space-2);
     align-items: center;
-    justify-content: flex-end;
-    position: absolute;
-    top: 0;
-    right: 0;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 100%;
 }
 
 .filter-bar {
     display: flex;
     gap: var(--space-2);
     flex-wrap: wrap;
-    justify-content: flex-end;
+    justify-content: center;
 }
 
 .filter-bar:empty {
@@ -732,6 +743,7 @@ header {
 
 .theme-switcher {
     display: flex;
+    flex: 0 0 auto;
     gap: 6px;
     padding: 4px;
     border-radius: 999px;
@@ -760,6 +772,25 @@ header {
     transform: translateY(-1px) scale(1.04);
     border-color: var(--color-accent);
     background: #fff0f5;
+}
+
+.tool-hint {
+    min-height: 28px;
+    max-width: min(100%, 300px);
+    padding: 7px 12px;
+    border: 1px solid rgba(255, 111, 145, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--color-muted);
+    font-size: 0.82rem;
+    line-height: 1.25;
+    text-align: center;
+    transition: transform 160ms ease, color 160ms ease;
+}
+
+.tool-hint.is-changing {
+    color: var(--color-ink);
+    transform: translateY(-1px);
 }
 
 .garden-grid {
@@ -866,6 +897,11 @@ header {
     text-align: center;
 }
 
+.download-sticker {
+    width: 100%;
+    margin-top: var(--space-4);
+}
+
 @keyframes mascotBounce {
     0%, 100% { transform: translateY(0) rotate(0deg); }
     35% { transform: translateY(-8px) rotate(-8deg); }
@@ -907,6 +943,7 @@ header {
         align-items: flex-start;
         flex-wrap: wrap;
         margin-top: var(--space-3);
+        justify-content: center;
     }
 
     .garden-grid {

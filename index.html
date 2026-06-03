@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Happy Garden 🌸</title>
+    <title>Fun Garden</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -14,7 +19,7 @@
     <div class="container">
         <header>
             <div class="header-left">
-                <h1>Fun Garden 😝</h1>
+                <h1><img class="brand-icon" src="assets/fun-garden-icon.png" alt=""> Fun Garden</h1>
                 <p class="subtitle">Draw something cute and add it to our garden!</p>
             </div>
             <div class="category-buttons" id="categoryButtons" aria-label="Drawing categories">
@@ -88,6 +93,7 @@
                 <button id="rainbowMode" class="tool-btn" type="button" aria-pressed="false" title="Rainbow brush">🌈</button>
                 <button id="sparkleMode" class="tool-btn" type="button" aria-pressed="false" title="Sparkle brush">✨</button>
                 <button id="undoCanvas" class="tool-btn" type="button" title="Undo">↶</button>
+                <span id="toolHint" class="tool-hint">Pick a color, or turn on Rainbow/Sparkle while drawing</span>
             </div>
 
             <div class="modal-actions">
@@ -158,6 +164,7 @@
                 <img id="previewImage" alt="Large garden drawing">
                 <figcaption id="previewCaption">A tiny drawing from the garden.</figcaption>
             </figure>
+            <button id="downloadSticker" class="btn-primary download-sticker" type="button">Download Sticker</button>
         </div>
     </div>
 
