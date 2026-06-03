@@ -50,6 +50,11 @@ let unsubscribeDrawings = null;
 let allDrawings = [];
 let activeFilter = 'all';
 let wallSource = 'local';
+let brushSize = 3;
+let rainbowMode = false;
+let sparkleMode = false;
+let rainbowHue = 0;
+let canvasHistory = [];
 
 const categoryEmojis = { ...DEFAULT_CATEGORY_EMOJIS };
 
@@ -84,6 +89,7 @@ document.body.addEventListener('click', () => {
 
 document.addEventListener('DOMContentLoaded', () => {
     loadSavedEmojis();
+    loadTheme();
     currentColor = getDrawColor('ink');
     syncCategoryButtons();
     setupEventListeners();
@@ -114,10 +120,33 @@ function setupEventListeners() {
     document.getElementById('clearCanvas').addEventListener('click', clearCanvas);
     document.getElementById('submitDrawing').addEventListener('click', submitDrawing);
     document.getElementById('refreshWall').addEventListener('click', refreshWall);
+    document.getElementById('undoCanvas').addEventListener('click', undoCanvas);
+    document.getElementById('rainbowMode').addEventListener('click', toggleRainbowMode);
+    document.getElementById('sparkleMode').addEventListener('click', toggleSparkleMode);
+    document.getElementById('closePreview').addEventListener('click', closePreview);
+    document.getElementById('exportGardenBtn').addEventListener('click', exportGardenBackup);
+
+    document.querySelectorAll('.brush-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.brush-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            brushSize = Number(btn.dataset.size);
+        });
+    });
+
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => setTheme(btn.dataset.theme));
+    });
 
     document.getElementById('drawingModal').addEventListener('click', (e) => {
         if (e.target.id === 'drawingModal') {
             closeModal();
+        }
+    });
+
+    document.getElementById('previewModal').addEventListener('click', (e) => {
+        if (e.target.id === 'previewModal') {
+            closePreview();
         }
     });
 }
@@ -156,7 +185,8 @@ function openDrawingModal(category) {
     document.getElementById('currentCategory').textContent = category;
     document.getElementById('categoryEmoji').textContent = categoryEmojis[category] || '✦';
     document.getElementById('drawingModal').classList.add('active');
-    clearCanvas();
+    canvasHistory = [];
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 function closeModal() {
@@ -166,6 +196,7 @@ function closeModal() {
 function startDrawing(e) {
     e.preventDefault();
     isDrawing = true;
+    saveCanvasState();
     canvas.setPointerCapture?.(e.pointerId);
     const point = getCanvasPoint(e);
     ctx.beginPath();
@@ -178,11 +209,15 @@ function draw(e) {
     e.preventDefault();
     const point = getCanvasPoint(e);
     ctx.lineTo(point.x, point.y);
-    ctx.strokeStyle = currentColor;
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = getStrokeColor();
+    ctx.lineWidth = brushSize;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.stroke();
+
+    if (sparkleMode && Math.random() > 0.72) {
+        drawSparkle(point);
+    }
 }
 
 function stopDrawing() {
@@ -198,12 +233,59 @@ function getCanvasPoint(e) {
 }
 
 function clearCanvas() {
+    saveCanvasState();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 function getDrawColor(name) {
     const token = getComputedStyle(document.documentElement).getPropertyValue(`--draw-${name}`).trim();
     return token || getComputedStyle(document.documentElement).getPropertyValue('--color-ink').trim();
+}
+
+function getStrokeColor() {
+    if (!rainbowMode) return currentColor;
+    rainbowHue = (rainbowHue + 8) % 360;
+    return `hsl(${rainbowHue}, 85%, 56%)`;
+}
+
+function drawSparkle(point) {
+    const oldFill = ctx.fillStyle;
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim();
+    ctx.beginPath();
+    ctx.arc(point.x + (Math.random() - 0.5) * 12, point.y + (Math.random() - 0.5) * 12, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = oldFill;
+}
+
+function saveCanvasState() {
+    canvasHistory.push(canvas.toDataURL('image/png'));
+    if (canvasHistory.length > 18) canvasHistory.shift();
+}
+
+function undoCanvas() {
+    const lastState = canvasHistory.pop();
+    if (!lastState) return;
+
+    const img = new Image();
+    img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+    };
+    img.src = lastState;
+}
+
+function toggleRainbowMode() {
+    rainbowMode = !rainbowMode;
+    const btn = document.getElementById('rainbowMode');
+    btn.classList.toggle('active', rainbowMode);
+    btn.setAttribute('aria-pressed', String(rainbowMode));
+}
+
+function toggleSparkleMode() {
+    sparkleMode = !sparkleMode;
+    const btn = document.getElementById('sparkleMode');
+    btn.classList.toggle('active', sparkleMode);
+    btn.setAttribute('aria-pressed', String(sparkleMode));
 }
 
 async function submitDrawing() {
@@ -432,9 +514,13 @@ function renderGarden() {
     if (visibleDrawings.length === 0) {
         const emptyState = document.createElement('div');
         emptyState.className = 'empty-state';
-        emptyState.textContent = activeFilter === 'all'
-            ? 'The garden is waiting for its first doodle.'
-            : 'Nothing in this corner yet.';
+        emptyState.innerHTML = `
+            <div class="empty-patch">
+                <span class="empty-sprout">🌱</span>
+                <strong>${activeFilter === 'all' ? 'Plant the first doodle' : 'Nothing in this corner yet'}</strong>
+                <span>${activeFilter === 'all' ? 'Pick a tiny friend above and make the wall wake up.' : 'Try another sticker pile.'}</span>
+            </div>
+        `;
         gardenGrid.appendChild(emptyState);
         return;
     }
@@ -448,10 +534,14 @@ function createDrawingCard(drawing) {
     const card = document.createElement('article');
     card.className = 'drawing-card';
     card.dataset.drawingId = drawing.id;
+    card.style.setProperty('--tilt', `${getStickerTilt(drawing.id)}deg`);
 
     const categoryTag = document.createElement('div');
     categoryTag.className = 'category-tag';
     categoryTag.textContent = getCategoryEmoji(drawing);
+
+    const tape = document.createElement('span');
+    tape.className = 'sticker-tape';
 
     const img = document.createElement('img');
     img.src = drawing.imageData;
@@ -483,11 +573,31 @@ function createDrawingCard(drawing) {
         await handleReaction(drawing, drawingKey, reactBtn, reactCount, e);
     });
 
+    card.addEventListener('click', () => openPreview(drawing));
+
+    card.appendChild(tape);
     card.appendChild(categoryTag);
     card.appendChild(img);
     card.appendChild(reactBtn);
     card.appendChild(reactCount);
     return card;
+}
+
+function getStickerTilt(id = '') {
+    const text = String(id);
+    const seed = text.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    return (seed % 9) - 4;
+}
+
+function openPreview(drawing) {
+    document.getElementById('previewEmoji').textContent = getCategoryEmoji(drawing);
+    document.getElementById('previewImage').src = drawing.imageData;
+    document.getElementById('previewCaption').textContent = `${drawing.category} sticker from the garden`;
+    document.getElementById('previewModal').classList.add('active');
+}
+
+function closePreview() {
+    document.getElementById('previewModal').classList.remove('active');
 }
 
 function getCategoryEmoji(drawing) {
@@ -550,6 +660,33 @@ function updateGardenStatus(message) {
     const countText = `${allDrawings.length} drawing${allDrawings.length === 1 ? '' : 's'}`;
     const recoveredText = hiddenOlder > 0 ? `, including ${hiddenOlder} restored older post${hiddenOlder === 1 ? '' : 's'}` : '';
     status.textContent = `${sourceText} · ${countText}${recoveredText}`;
+}
+
+function setTheme(theme) {
+    document.body.dataset.theme = theme;
+    localStorage.setItem('gardenTheme', theme);
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === theme);
+    });
+}
+
+function loadTheme() {
+    setTheme(localStorage.getItem('gardenTheme') || 'morning');
+}
+
+function exportGardenBackup() {
+    const backup = {
+        exportedAt: new Date().toISOString(),
+        count: allDrawings.length,
+        drawings: allDrawings.map(({ sortTime, ...drawing }) => drawing)
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `fun-garden-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
 }
 
 async function handleReaction(drawing, drawingKey, reactBtn, reactCount, clickEvent) {

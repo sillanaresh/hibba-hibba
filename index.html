@@ -43,6 +43,11 @@
                     <p id="gardenStatus" class="garden-status">Connecting to the wall...</p>
                 </div>
                 <div class="wall-tools">
+                    <div class="theme-switcher" aria-label="Garden theme">
+                        <button class="theme-btn active" type="button" data-theme="morning" title="Morning garden" aria-label="Morning garden">☀️</button>
+                        <button class="theme-btn" type="button" data-theme="moon" title="Moon garden" aria-label="Moon garden">🌙</button>
+                        <button class="theme-btn" type="button" data-theme="picnic" title="Picnic garden" aria-label="Picnic garden">🧺</button>
+                    </div>
                     <div id="filterBar" class="filter-bar" aria-label="Filter drawings"></div>
                     <button id="refreshWall" class="icon-btn" type="button" title="Refresh wall" aria-label="Refresh wall">↻</button>
                 </div>
@@ -72,6 +77,17 @@
                 <div class="canvas-container">
                     <canvas id="drawingCanvas" width="200" height="200"></canvas>
                 </div>
+            </div>
+
+            <div class="draw-tools" aria-label="Drawing tools">
+                <div class="brush-sizes" aria-label="Brush size">
+                    <button class="tool-btn brush-btn active" type="button" data-size="3" title="Tiny brush">•</button>
+                    <button class="tool-btn brush-btn" type="button" data-size="6" title="Soft brush">●</button>
+                    <button class="tool-btn brush-btn" type="button" data-size="10" title="Chunky brush">⬤</button>
+                </div>
+                <button id="rainbowMode" class="tool-btn" type="button" aria-pressed="false" title="Rainbow brush">🌈</button>
+                <button id="sparkleMode" class="tool-btn" type="button" aria-pressed="false" title="Sparkle brush">✨</button>
+                <button id="undoCanvas" class="tool-btn" type="button" title="Undo">↶</button>
             </div>
 
             <div class="modal-actions">
@@ -111,6 +127,11 @@
                     <button id="clearGardenBtn" class="btn-danger">Delete All Drawings</button>
                 </div>
 
+                <div class="settings-section">
+                    <h4>Backup</h4>
+                    <button id="exportGardenBtn" class="btn-secondary">Export Garden Backup</button>
+                </div>
+
                 <!-- Remove Last N -->
                 <div class="settings-section">
                     <h4>Remove Latest Drawings</h4>
@@ -124,6 +145,19 @@
             <div class="settings-footer">
                 <button id="closeSettingsBtn" class="btn-primary">Close Settings</button>
             </div>
+        </div>
+    </div>
+
+    <div id="previewModal" class="modal">
+        <div class="modal-content preview-content">
+            <div class="modal-header">
+                <h3><span id="previewEmoji">🌱</span> Garden sticker</h3>
+                <button class="close-btn" id="closePreview">&times;</button>
+            </div>
+            <figure class="preview-frame">
+                <img id="previewImage" alt="Large garden drawing">
+                <figcaption id="previewCaption">A tiny drawing from the garden.</figcaption>
+            </figure>
         </div>
     </div>
 
