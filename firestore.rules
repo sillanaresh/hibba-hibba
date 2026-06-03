@@ -1,0 +1,28 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /drawings/{drawingId} {
+      allow read: if true;
+      allow create: if isDrawing();
+      allow update: if onlyReactionChanged();
+      allow delete: if true;
+    }
+  }
+
+  function isDrawing() {
+    return request.resource.data.keys().hasAll(['category', 'imageData'])
+      && request.resource.data.category is string
+      && request.resource.data.category.size() > 0
+      && request.resource.data.category.size() <= 40
+      && request.resource.data.imageData is string
+      && request.resource.data.imageData.matches('^data:image/png;base64,.*')
+      && (!('reactions' in request.resource.data) || request.resource.data.reactions is int);
+  }
+
+  function onlyReactionChanged() {
+    return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+      && request.resource.data.reactions is int
+      && request.resource.data.reactions >= 0;
+  }
+}

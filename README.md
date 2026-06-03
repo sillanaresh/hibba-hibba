@@ -39,6 +39,17 @@ No login required. No rules. Just pure creative fun. Share the link with friends
 4. Select a location (closest to you)
 5. Click "Enable"
 
+### Step 2b: Deploy Firestore Rules
+
+This repo includes `firestore.rules` for the shared doodle wall. Deploy them with:
+
+```bash
+npx firebase-tools login
+npx firebase-tools deploy --only firestore:rules --project happy-garden-13531
+```
+
+The rules allow anyone with the link to read and add drawings, which matches the no-login wall experience.
+
 ### Step 3: Get Firebase Config
 
 1. In Firebase Console, click the gear icon ⚙️ next to "Project Overview"
@@ -130,6 +141,11 @@ happy-garden/
 - Make sure Firebase config is correct
 - Check browser console for errors
 - Verify Firestore is in test mode
+
+**Friends added drawings but the wall looks empty now?**
+- The app now loads the full `drawings` collection without `orderBy('timestamp')`, so older posts missing a timestamp are no longer hidden.
+- If the page says the cloud wall is locked, Firestore rules are blocking reads. The drawings may still be in Firebase; update the Firestore rules or redeploy the intended rules from the Firebase console/CLI.
+- A direct read returning `Missing or insufficient permissions` points to rules/API access, not deleted drawings.
 
 **Can't draw on mobile?**
 - Touch events are supported!

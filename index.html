@@ -12,37 +12,42 @@
     <button id="settingsBtn" class="settings-icon" title="Admin Settings">⚙️</button>
 
     <div class="container">
-        <!-- Header with Category Buttons -->
         <header>
             <div class="header-left">
                 <h1>Fun Garden 😝</h1>
                 <p class="subtitle">Draw something cute and add it to our garden!</p>
             </div>
-            <!-- Category Selection moved to top-right -->
-            <div class="category-buttons">
-                <button class="category-btn" data-category="cat">
+            <div class="category-buttons" id="categoryButtons" aria-label="Drawing categories">
+                <button class="category-btn" data-category="cat" type="button" title="Draw cat" aria-label="Draw cat">
                     <span class="emoji">🐱</span>
                 </button>
-                <button class="category-btn" data-category="dog">
+                <button class="category-btn" data-category="dog" type="button" title="Draw dog" aria-label="Draw dog">
                     <span class="emoji">🐶</span>
                 </button>
-                <button class="category-btn" data-category="flower">
+                <button class="category-btn" data-category="flower" type="button" title="Draw flower" aria-label="Draw flower">
                     <span class="emoji">🌸</span>
                 </button>
-                <button class="category-btn" data-category="fish">
+                <button class="category-btn" data-category="fish" type="button" title="Draw fish" aria-label="Draw fish">
                     <span class="emoji">🐟</span>
                 </button>
-                <button class="category-btn" data-category="duck">
+                <button class="category-btn" data-category="duck" type="button" title="Draw duck" aria-label="Draw duck">
                     <span class="emoji">🦆</span>
                 </button>
             </div>
         </header>
 
-        <!-- Garden Grid -->
         <div class="garden">
-            <h2>Our Garden</h2>
+            <div class="garden-heading">
+                <div>
+                    <h2>Our Garden</h2>
+                    <p id="gardenStatus" class="garden-status">Connecting to the wall...</p>
+                </div>
+                <div class="wall-tools">
+                    <div id="filterBar" class="filter-bar" aria-label="Filter drawings"></div>
+                    <button id="refreshWall" class="icon-btn" type="button" title="Refresh wall" aria-label="Refresh wall">↻</button>
+                </div>
+            </div>
             <div id="gardenGrid" class="garden-grid">
-                <!-- Drawings will appear here -->
             </div>
         </div>
     </div>
@@ -57,12 +62,12 @@
 
             <div class="drawing-area">
                 <div class="color-palette">
-                    <button class="color-btn active" data-color="#2D3047" style="background: #2D3047;" title="Black"></button>
-                    <button class="color-btn" data-color="#FF6B9D" style="background: #FF6B9D;" title="Pink"></button>
-                    <button class="color-btn" data-color="#93E1D8" style="background: #93E1D8;" title="Mint"></button>
-                    <button class="color-btn" data-color="#FFA69E" style="background: #FFA69E;" title="Peach"></button>
-                    <button class="color-btn" data-color="#B8D4E8" style="background: #B8D4E8;" title="Sky Blue"></button>
-                    <button class="eraser-btn" data-color="#FFFFFF" title="Eraser">✏️</button>
+                    <button class="color-btn swatch-ink active" data-color="ink" title="Black"></button>
+                    <button class="color-btn swatch-berry" data-color="berry" title="Pink"></button>
+                    <button class="color-btn swatch-mint" data-color="mint" title="Mint"></button>
+                    <button class="color-btn swatch-peach" data-color="peach" title="Peach"></button>
+                    <button class="color-btn swatch-sky" data-color="sky" title="Sky Blue"></button>
+                    <button class="eraser-btn" data-color="eraser" title="Eraser">⌫</button>
                 </div>
                 <div class="canvas-container">
                     <canvas id="drawingCanvas" width="200" height="200"></canvas>
@@ -80,21 +85,21 @@
     <div id="settingsModal" class="modal">
         <div class="modal-content settings-content">
             <div class="modal-header">
-                <h3>⚙️ Admin Settings</h3>
+                    <h3>Admin Settings</h3>
                 <button class="close-btn" id="closeSettings">&times;</button>
             </div>
 
             <div class="settings-body">
                 <!-- Add Emoji -->
                 <div class="settings-section">
-                    <h4>➕ Add New Emoji Category</h4>
+                    <h4>Add New Emoji Category</h4>
                     <button id="addEmojiBtn" class="btn-primary">Pick Emoji</button>
                     <div id="emojiPickerContainer"></div>
                 </div>
 
                 <!-- Remove Emoji -->
                 <div class="settings-section">
-                    <h4>🗑️ Remove Emoji Category</h4>
+                    <h4>Remove Emoji Category</h4>
                     <div id="emojiList" class="emoji-list">
                         <!-- Current emojis will appear here -->
                     </div>
@@ -102,33 +107,26 @@
 
                 <!-- Clear Garden -->
                 <div class="settings-section">
-                    <h4>🧹 Clear Entire Garden</h4>
+                    <h4>Clear Entire Garden</h4>
                     <button id="clearGardenBtn" class="btn-danger">Delete All Drawings</button>
                 </div>
 
                 <!-- Remove Last N -->
                 <div class="settings-section">
-                    <h4>⏪ Remove Last N Drawings</h4>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="number" id="removeLastN" min="1" placeholder="Enter number" style="flex: 1; padding: 10px; border: 2px solid #FFD6E8; border-radius: 10px;">
+                    <h4>Remove Latest Drawings</h4>
+                    <div class="number-action">
+                        <input type="number" id="removeLastN" min="1" placeholder="Enter number">
                         <button id="removeLastNBtn" class="btn-secondary">Remove</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Close Button at Bottom -->
-            <div style="text-align: center; margin-top: 20px;">
-                <button id="closeSettingsBtn" class="btn-primary" style="min-width: 200px;">Close Settings</button>
+            <div class="settings-footer">
+                <button id="closeSettingsBtn" class="btn-primary">Close Settings</button>
             </div>
         </div>
     </div>
 
-    <!-- Emoji Picker Library -->
-    <script type="module">
-        import 'https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js';
-    </script>
-
-    <!-- Firebase SDK -->
     <script type="module" src="app.js"></script>
 </body>
 </html>

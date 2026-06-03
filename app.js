@@ -1,11 +1,3 @@
-// Firebase configuration will go here
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, limit, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-
-// Load confetti library
-import confetti from 'https://cdn.skypack.dev/canvas-confetti';
-
-// Firebase config - Connected to your happy-garden project!
 const firebaseConfig = {
     apiKey: "AIzaSyD9n7tntYINGMt6MzzIiGDsKOGwPxXFolE",
     authDomain: "happy-garden-13531.firebaseapp.com",
@@ -15,25 +7,15 @@ const firebaseConfig = {
     appId: "1:1085122729486:web:9a5bcc00e31be432e30e5f"
 };
 
-// Initialize Firebase
-let app, db;
-try {
-    app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    console.log('Firebase initialized successfully!');
-} catch (error) {
-    console.log('Firebase not configured yet. Using local mode.');
-}
-
-// Canvas setup
-const canvas = document.getElementById('drawingCanvas');
-const ctx = canvas.getContext('2d');
-let isDrawing = false;
-let currentColor = '#2D3047';
-let currentCategory = '';
-
-// Category emoji map
-const categoryEmojis = {
+const WALL_COLLECTION = 'drawings';
+const ADMIN_PASSWORD = '7Maruthi';
+const FIREBASE_TIMEOUT_MS = 7000;
+const FIREBASE_MODULES = {
+    app: 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js',
+    firestore: 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js',
+    auth: 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js'
+};
+const DEFAULT_CATEGORY_EMOJIS = {
     cat: '🐱',
     dog: '🐶',
     flower: '🌸',
@@ -41,14 +23,42 @@ const categoryEmojis = {
     duck: '🦆'
 };
 
-// Sound effects
+let initializeApp;
+let getFirestore;
+let collection;
+let addDoc;
+let getDocs;
+let deleteDoc;
+let doc;
+let updateDoc;
+let onSnapshot;
+let increment;
+let serverTimestamp;
+let getAuth;
+let signInAnonymously;
+let app;
+let db;
+let auth;
+let firebaseReadyPromise;
+
+const canvas = document.getElementById('drawingCanvas');
+const ctx = canvas.getContext('2d');
+let isDrawing = false;
+let currentColor = '';
+let currentCategory = '';
+let unsubscribeDrawings = null;
+let allDrawings = [];
+let activeFilter = 'all';
+let wallSource = 'local';
+
+const categoryEmojis = { ...DEFAULT_CATEGORY_EMOJIS };
+
 let soundEnabled = true;
 const popSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTcIGWi77eefTRAMUKfj8LZjHAY4ktfyzHksBSR3x/DdkEAKFF606+uoVRQKRp/g8r5sIQUrgs7y2Yk3CBlou+3nn00QDFCn4/C2YxwGOJLX8sx5LAUkd8fw3ZBAC'); // Pop sound
-const ambientSound = new Audio('058216_quotcool-breezequot-sample-2wav-39360.mp3'); // Cool breeze ambient sound
+const ambientSound = new Audio('058216_quotcool-breezequot-sample-2wav-39360.mp3');
 ambientSound.loop = true;
 ambientSound.volume = 0.3;
 
-// Sound toggle
 document.getElementById('soundToggle').addEventListener('click', () => {
     soundEnabled = !soundEnabled;
     const btn = document.getElementById('soundToggle');
@@ -56,7 +66,7 @@ document.getElementById('soundToggle').addEventListener('click', () => {
     if (soundEnabled) {
         btn.textContent = '🔊';
         btn.classList.remove('muted');
-        ambientSound.play().catch(() => {}); // Start ambient if enabled
+        ambientSound.play().catch(() => {});
     } else {
         btn.textContent = '🔇';
         btn.classList.add('muted');
@@ -64,7 +74,6 @@ document.getElementById('soundToggle').addEventListener('click', () => {
     }
 });
 
-// Auto-play ambient sound on first interaction
 let ambientStarted = false;
 document.body.addEventListener('click', () => {
     if (!ambientStarted && soundEnabled) {
@@ -73,47 +82,39 @@ document.body.addEventListener('click', () => {
     }
 }, { once: true });
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    loadSavedEmojis();
+    currentColor = getDrawColor('ink');
+    syncCategoryButtons();
     setupEventListeners();
     loadDrawings();
 });
 
 function setupEventListeners() {
-    // Category buttons
     document.querySelectorAll('.category-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const category = btn.dataset.category;
-            openDrawingModal(category);
+            openDrawingModal(btn.dataset.category);
         });
     });
 
-    // Color buttons
     document.querySelectorAll('.color-btn, .eraser-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.color-btn, .eraser-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            currentColor = btn.dataset.color;
+            currentColor = getDrawColor(btn.dataset.color);
         });
     });
 
-    // Canvas drawing
-    canvas.addEventListener('mousedown', startDrawing);
-    canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('mouseup', stopDrawing);
-    canvas.addEventListener('mouseout', stopDrawing);
+    canvas.addEventListener('pointerdown', startDrawing);
+    canvas.addEventListener('pointermove', draw);
+    canvas.addEventListener('pointerup', stopDrawing);
+    canvas.addEventListener('pointerleave', stopDrawing);
 
-    // Touch events for mobile
-    canvas.addEventListener('touchstart', handleTouchStart);
-    canvas.addEventListener('touchmove', handleTouchMove);
-    canvas.addEventListener('touchend', stopDrawing);
-
-    // Modal controls
     document.getElementById('closeModal').addEventListener('click', closeModal);
     document.getElementById('clearCanvas').addEventListener('click', clearCanvas);
     document.getElementById('submitDrawing').addEventListener('click', submitDrawing);
+    document.getElementById('refreshWall').addEventListener('click', refreshWall);
 
-    // Click outside modal to close
     document.getElementById('drawingModal').addEventListener('click', (e) => {
         if (e.target.id === 'drawingModal') {
             closeModal();
@@ -121,10 +122,39 @@ function setupEventListeners() {
     });
 }
 
+function syncCategoryButtons() {
+    const categoryButtons = document.getElementById('categoryButtons');
+
+    Object.entries(categoryEmojis).forEach(([category, emoji]) => {
+        let btn = categoryButtons.querySelector(`[data-category="${category}"]`);
+        if (btn) {
+            btn.title = `Draw ${category}`;
+            btn.setAttribute('aria-label', `Draw ${category}`);
+            const emojiSpan = btn.querySelector('.emoji');
+            if (emojiSpan) emojiSpan.textContent = emoji;
+            return;
+        }
+
+        const newBtn = document.createElement('button');
+        newBtn.className = 'category-btn';
+        newBtn.dataset.category = category;
+        newBtn.type = 'button';
+        newBtn.title = `Draw ${category}`;
+        newBtn.setAttribute('aria-label', `Draw ${category}`);
+
+        const emojiSpan = document.createElement('span');
+        emojiSpan.className = 'emoji';
+        emojiSpan.textContent = emoji;
+
+        newBtn.appendChild(emojiSpan);
+        categoryButtons.appendChild(newBtn);
+    });
+}
+
 function openDrawingModal(category) {
     currentCategory = category;
     document.getElementById('currentCategory').textContent = category;
-    document.getElementById('categoryEmoji').textContent = categoryEmojis[category];
+    document.getElementById('categoryEmoji').textContent = categoryEmojis[category] || '✦';
     document.getElementById('drawingModal').classList.add('active');
     clearCanvas();
 }
@@ -134,17 +164,20 @@ function closeModal() {
 }
 
 function startDrawing(e) {
+    e.preventDefault();
     isDrawing = true;
-    const rect = canvas.getBoundingClientRect();
+    canvas.setPointerCapture?.(e.pointerId);
+    const point = getCanvasPoint(e);
     ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.moveTo(point.x, point.y);
 }
 
 function draw(e) {
     if (!isDrawing) return;
 
-    const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    e.preventDefault();
+    const point = getCanvasPoint(e);
+    ctx.lineTo(point.x, point.y);
     ctx.strokeStyle = currentColor;
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
@@ -156,38 +189,26 @@ function stopDrawing() {
     isDrawing = false;
 }
 
-function handleTouchStart(e) {
-    e.preventDefault();
-    const touch = e.touches[0];
+function getCanvasPoint(e) {
     const rect = canvas.getBoundingClientRect();
-    isDrawing = true;
-    ctx.beginPath();
-    ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
-}
-
-function handleTouchMove(e) {
-    e.preventDefault();
-    if (!isDrawing) return;
-
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
-    ctx.strokeStyle = currentColor;
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke();
+    return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
+    };
 }
 
 function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
+function getDrawColor(name) {
+    const token = getComputedStyle(document.documentElement).getPropertyValue(`--draw-${name}`).trim();
+    return token || getComputedStyle(document.documentElement).getPropertyValue('--color-ink').trim();
+}
+
 async function submitDrawing() {
-    // Convert canvas to image data
     const imageData = canvas.toDataURL('image/png');
 
-    // Check if canvas is empty
     const isCanvasEmpty = !ctx.getImageData(0, 0, canvas.width, canvas.height).data.some(channel => channel !== 0);
     if (isCanvasEmpty) {
         alert('Please draw something first! 🎨');
@@ -195,44 +216,43 @@ async function submitDrawing() {
     }
 
     try {
-        // Save to Firebase
+        const drawing = {
+            category: currentCategory,
+            categoryEmoji: categoryEmojis[currentCategory] || '✦',
+            imageData: imageData,
+            reactions: 0,
+            timestamp: new Date().toISOString()
+        };
+
         if (db) {
-            await addDoc(collection(db, 'drawings'), {
-                category: currentCategory,
-                imageData: imageData,
-                timestamp: new Date().toISOString()
+            await addDoc(collection(db, WALL_COLLECTION), {
+                ...drawing,
+                createdAt: serverTimestamp()
             });
             console.log('Drawing saved to Firebase!');
         } else {
-            // Fallback: save to localStorage for testing
             const drawings = JSON.parse(localStorage.getItem('drawings') || '[]');
             drawings.push({
-                category: currentCategory,
-                imageData: imageData,
-                timestamp: new Date().toISOString()
+                ...drawing,
+                id: crypto.randomUUID()
             });
             localStorage.setItem('drawings', JSON.stringify(drawings));
+            loadLocalDrawings();
             console.log('Drawing saved to localStorage (Firebase not configured)');
         }
 
-        // Play pop sound
         if (soundEnabled) {
             popSound.currentTime = 0;
             popSound.play().catch(() => {});
         }
 
-        // Confetti explosion!
-        confetti({
+        fireConfetti({
             particleCount: 100,
             spread: 70,
             origin: { y: 0.6 }
         });
 
-        // Reload drawings and close modal
-        await loadDrawings();
         closeModal();
-
-        // Show success message
         showSuccessMessage();
     } catch (error) {
         console.error('Error saving drawing:', error);
@@ -241,150 +261,363 @@ async function submitDrawing() {
 }
 
 async function loadDrawings() {
-    const gardenGrid = document.getElementById('gardenGrid');
+    if (!db) {
+        await loadLocalDrawings();
+    }
+
+    await connectFirebase();
+
+    if (db) {
+        wallSource = 'cloud';
+        updateGardenStatus('Connecting to live cloud wall...');
+        await signInForFirestore();
+
+        if (unsubscribeDrawings) return;
+
+        let snapshotResolved = false;
+        const snapshotTimeout = setTimeout(async () => {
+            if (snapshotResolved) return;
+            await loadLocalDrawings();
+            updateGardenStatus('Shared wall is taking too long. Drawing still works on this device.');
+        }, FIREBASE_TIMEOUT_MS);
+
+        unsubscribeDrawings = onSnapshot(
+            collection(db, WALL_COLLECTION),
+            (snapshot) => {
+                snapshotResolved = true;
+                clearTimeout(snapshotTimeout);
+                const drawings = [];
+                snapshot.forEach((docSnapshot) => {
+                    drawings.push(normalizeDrawing(docSnapshot.data(), docSnapshot.id));
+                });
+                renderDrawings(drawings, 'cloud');
+            },
+            async (error) => {
+                snapshotResolved = true;
+                clearTimeout(snapshotTimeout);
+                console.error('Error listening to drawings:', error);
+                const fallbackMessage = error.code === 'permission-denied'
+                    ? 'Cloud wall is locked by Firebase rules. The saved drawings may still be there.'
+                    : 'Cloud wall is unavailable. Showing this device only.';
+                updateGardenStatus(fallbackMessage);
+                await loadLocalDrawings();
+                updateGardenStatus(fallbackMessage);
+            }
+        );
+        return;
+    }
+
+    await loadLocalDrawings();
+}
+
+async function connectFirebase() {
+    if (db || firebaseReadyPromise) {
+        return firebaseReadyPromise;
+    }
+
+    updateGardenStatus('Connecting to the shared wall...');
+    firebaseReadyPromise = withTimeout(loadFirebase(), FIREBASE_TIMEOUT_MS)
+        .catch((error) => {
+            console.warn('Firebase did not start. Local drawing still works.', error);
+            db = null;
+            auth = null;
+            firebaseReadyPromise = null;
+            updateGardenStatus('Shared wall is offline right now. Drawing still works on this device.');
+        });
+
+    return firebaseReadyPromise;
+}
+
+async function loadFirebase() {
+    const [appModule, firestoreModule, authModule] = await Promise.all([
+        import(FIREBASE_MODULES.app),
+        import(FIREBASE_MODULES.firestore),
+        import(FIREBASE_MODULES.auth)
+    ]);
+
+    initializeApp = appModule.initializeApp;
+    getFirestore = firestoreModule.getFirestore;
+    collection = firestoreModule.collection;
+    addDoc = firestoreModule.addDoc;
+    getDocs = firestoreModule.getDocs;
+    deleteDoc = firestoreModule.deleteDoc;
+    doc = firestoreModule.doc;
+    updateDoc = firestoreModule.updateDoc;
+    onSnapshot = firestoreModule.onSnapshot;
+    increment = firestoreModule.increment;
+    serverTimestamp = firestoreModule.serverTimestamp;
+    getAuth = authModule.getAuth;
+    signInAnonymously = authModule.signInAnonymously;
+
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+    console.log('Firebase initialized successfully!');
+}
+
+function withTimeout(promise, ms) {
+    let timeoutId;
+    const timeout = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('Firebase connection timed out')), ms);
+    });
+
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
+async function signInForFirestore() {
+    if (!auth || auth.currentUser) return;
 
     try {
-        let drawings = [];
-
-        if (db) {
-            // Load from Firebase
-            const q = query(collection(db, 'drawings'), orderBy('timestamp', 'desc'));
-            const querySnapshot = await getDocs(q);
-            querySnapshot.forEach((doc) => {
-                drawings.push(doc.data());
-            });
-        } else {
-            // Load from localStorage
-            drawings = JSON.parse(localStorage.getItem('drawings') || '[]');
-            drawings.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        }
-
-        // Clear grid
-        gardenGrid.innerHTML = '';
-
-        if (drawings.length === 0) {
-            gardenGrid.innerHTML = '<div class="empty-state"><p>🌱 The garden is empty. Be the first to add a drawing!</p></div>';
-            return;
-        }
-
-        // Display drawings in grid
-        drawings.forEach((drawing, index) => {
-            const card = document.createElement('div');
-            card.className = 'drawing-card';
-            card.dataset.drawingId = drawing.id || index;
-
-            const categoryTag = document.createElement('div');
-            categoryTag.className = 'category-tag';
-            categoryTag.textContent = categoryEmojis[drawing.category];
-
-            const img = document.createElement('img');
-            img.src = drawing.imageData;
-            img.width = 80;
-            img.height = 80;
-            img.style.borderRadius = '8px';
-
-            // React button
-            const reactBtn = document.createElement('button');
-            reactBtn.className = 'react-btn';
-            reactBtn.innerHTML = '❤️';
-            reactBtn.title = 'React with love';
-
-            // Check if already reacted (from localStorage)
-            const reactions = JSON.parse(localStorage.getItem('reactions') || '{}');
-            const drawingKey = drawing.id || index;
-            const reactionCount = drawing.reactions || reactions[drawingKey] || 0;
-            const hasReacted = localStorage.getItem(`reacted_${drawingKey}`) === 'true';
-
-            if (hasReacted) {
-                reactBtn.classList.add('reacted');
-            }
-
-            reactBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                await handleReaction(drawing, drawingKey, reactBtn, reactCount);
-            });
-
-            // React count
-            const reactCount = document.createElement('div');
-            reactCount.className = 'react-count';
-            if (reactionCount > 0) {
-                reactCount.textContent = reactionCount;
-                reactCount.classList.add('visible');
-            }
-
-            card.appendChild(categoryTag);
-            card.appendChild(img);
-            card.appendChild(reactBtn);
-            card.appendChild(reactCount);
-            gardenGrid.appendChild(card);
-        });
+        await signInAnonymously(auth);
     } catch (error) {
-        console.error('Error loading drawings:', error);
-        gardenGrid.innerHTML = '<div class="empty-state"><p>Unable to load drawings. Please refresh the page.</p></div>';
+        console.warn('Anonymous Firebase auth is not available. Trying Firestore without auth.', error);
     }
 }
 
-// Handle reaction (heart button)
-async function handleReaction(drawing, drawingKey, reactBtn, reactCount) {
+async function loadLocalDrawings() {
+    wallSource = 'local';
+    const drawings = JSON.parse(localStorage.getItem('drawings') || '[]').map((drawing, index) => {
+        return normalizeDrawing(drawing, drawing.id || `local-${index}`);
+    });
+    renderDrawings(drawings, 'local');
+}
+
+async function refreshWall() {
+    if (db && unsubscribeDrawings) {
+        unsubscribeDrawings();
+        unsubscribeDrawings = null;
+    }
+    await loadDrawings();
+}
+
+function normalizeDrawing(drawing, id) {
+    return {
+        ...drawing,
+        id,
+        category: drawing.category || 'mystery',
+        categoryEmoji: drawing.categoryEmoji || categoryEmojis[drawing.category] || '✦',
+        reactions: Number(drawing.reactions || 0),
+        sortTime: getDrawingTime(drawing)
+    };
+}
+
+function getDrawingTime(drawing) {
+    const value = drawing.createdAt || drawing.timestamp || drawing.clientCreatedAt || drawing.date;
+    if (!value) return 0;
+    if (typeof value.toMillis === 'function') return value.toMillis();
+    if (typeof value.seconds === 'number') return value.seconds * 1000;
+    if (typeof value === 'string') {
+        const parsed = Date.parse(value);
+        return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+}
+
+function renderDrawings(drawings, source) {
+    allDrawings = drawings.sort((a, b) => b.sortTime - a.sortTime);
+    wallSource = source;
+    updateFilterChips();
+    renderGarden();
+}
+
+function renderGarden() {
+    const gardenGrid = document.getElementById('gardenGrid');
+    const visibleDrawings = activeFilter === 'all'
+        ? allDrawings
+        : allDrawings.filter((drawing) => drawing.category === activeFilter);
+
+    gardenGrid.innerHTML = '';
+    updateGardenStatus();
+
+    if (visibleDrawings.length === 0) {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'empty-state';
+        emptyState.textContent = activeFilter === 'all'
+            ? 'The garden is waiting for its first doodle.'
+            : 'Nothing in this corner yet.';
+        gardenGrid.appendChild(emptyState);
+        return;
+    }
+
+    visibleDrawings.forEach((drawing) => {
+        gardenGrid.appendChild(createDrawingCard(drawing));
+    });
+}
+
+function createDrawingCard(drawing) {
+    const card = document.createElement('article');
+    card.className = 'drawing-card';
+    card.dataset.drawingId = drawing.id;
+
+    const categoryTag = document.createElement('div');
+    categoryTag.className = 'category-tag';
+    categoryTag.textContent = getCategoryEmoji(drawing);
+
+    const img = document.createElement('img');
+    img.src = drawing.imageData;
+    img.alt = `${drawing.category} drawing`;
+    img.loading = 'lazy';
+    img.width = 112;
+    img.height = 112;
+
+    const reactBtn = document.createElement('button');
+    reactBtn.className = 'react-btn';
+    reactBtn.type = 'button';
+    reactBtn.textContent = '♥';
+    reactBtn.title = 'React with love';
+    reactBtn.setAttribute('aria-label', 'React with love');
+
+    const drawingKey = drawing.id;
     const hasReacted = localStorage.getItem(`reacted_${drawingKey}`) === 'true';
+    if (hasReacted) reactBtn.classList.add('reacted');
+
+    const reactCount = document.createElement('div');
+    reactCount.className = 'react-count';
+    if (drawing.reactions > 0) {
+        reactCount.textContent = drawing.reactions;
+        reactCount.classList.add('visible');
+    }
+
+    reactBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await handleReaction(drawing, drawingKey, reactBtn, reactCount, e);
+    });
+
+    card.appendChild(categoryTag);
+    card.appendChild(img);
+    card.appendChild(reactBtn);
+    card.appendChild(reactCount);
+    return card;
+}
+
+function getCategoryEmoji(drawing) {
+    return drawing.categoryEmoji || categoryEmojis[drawing.category] || '✦';
+}
+
+function updateFilterChips() {
+    const filterBar = document.getElementById('filterBar');
+    const categories = new Map();
+
+    allDrawings.forEach((drawing) => {
+        categories.set(drawing.category, getCategoryEmoji(drawing));
+    });
+
+    Object.entries(categoryEmojis).forEach(([category, emoji]) => {
+        categories.set(category, emoji);
+    });
+
+    filterBar.innerHTML = '';
+    filterBar.appendChild(createFilterChip('all', 'All', allDrawings.length));
+
+    Array.from(categories.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .forEach(([category, emoji]) => {
+            const count = allDrawings.filter((drawing) => drawing.category === category).length;
+            if (count > 0) {
+                filterBar.appendChild(createFilterChip(category, emoji, count));
+            }
+        });
+}
+
+function createFilterChip(filter, label, count) {
+    const chip = document.createElement('button');
+    chip.className = 'filter-chip';
+    chip.type = 'button';
+    chip.dataset.filter = filter;
+    chip.textContent = `${label} ${count}`;
+    chip.setAttribute('aria-pressed', String(activeFilter === filter));
+
+    if (activeFilter === filter) chip.classList.add('active');
+
+    chip.addEventListener('click', () => {
+        activeFilter = filter;
+        updateFilterChips();
+        renderGarden();
+    });
+
+    return chip;
+}
+
+function updateGardenStatus(message) {
+    const status = document.getElementById('gardenStatus');
+    if (message) {
+        status.textContent = message;
+        return;
+    }
+
+    const hiddenOlder = allDrawings.filter((drawing) => drawing.sortTime === 0).length;
+    const sourceText = wallSource === 'cloud' ? 'Live cloud wall' : 'This device only';
+    const countText = `${allDrawings.length} drawing${allDrawings.length === 1 ? '' : 's'}`;
+    const recoveredText = hiddenOlder > 0 ? `, including ${hiddenOlder} restored older post${hiddenOlder === 1 ? '' : 's'}` : '';
+    status.textContent = `${sourceText} · ${countText}${recoveredText}`;
+}
+
+async function handleReaction(drawing, drawingKey, reactBtn, reactCount, clickEvent) {
+    const hasReacted = localStorage.getItem(`reacted_${drawingKey}`) === 'true';
+    const delta = hasReacted ? -1 : 1;
+    const nextCount = Math.max(0, (Number(drawing.reactions) || 0) + delta);
 
     if (hasReacted) {
-        // Un-react
         localStorage.removeItem(`reacted_${drawingKey}`);
         reactBtn.classList.remove('reacted');
-
-        // Update count
-        const reactions = JSON.parse(localStorage.getItem('reactions') || '{}');
-        reactions[drawingKey] = Math.max(0, (reactions[drawingKey] || 1) - 1);
-        localStorage.setItem('reactions', JSON.stringify(reactions));
-
-        if (reactions[drawingKey] === 0) {
-            reactCount.classList.remove('visible');
-        } else {
-            reactCount.textContent = reactions[drawingKey];
-        }
     } else {
-        // React
         localStorage.setItem(`reacted_${drawingKey}`, 'true');
         reactBtn.classList.add('reacted');
+    }
 
-        // Update count
-        const reactions = JSON.parse(localStorage.getItem('reactions') || '{}');
-        reactions[drawingKey] = (reactions[drawingKey] || 0) + 1;
-        localStorage.setItem('reactions', JSON.stringify(reactions));
+    drawing.reactions = nextCount;
+    reactCount.textContent = nextCount;
+    reactCount.classList.toggle('visible', nextCount > 0);
 
-        reactCount.textContent = reactions[drawingKey];
-        reactCount.classList.add('visible');
+    if (db && drawing.id && !drawing.id.startsWith('local-')) {
+        await updateDoc(doc(db, WALL_COLLECTION, drawing.id), {
+            reactions: increment(delta)
+        });
+    } else {
+        const drawings = JSON.parse(localStorage.getItem('drawings') || '[]');
+        const nextDrawings = drawings.map((item) => {
+            if ((item.id || item.timestamp) === drawingKey) {
+                return { ...item, reactions: nextCount };
+            }
+            return item;
+        });
+        localStorage.setItem('drawings', JSON.stringify(nextDrawings));
+    }
 
-        // Mini confetti
-        confetti({
+    if (!hasReacted) {
+        fireConfetti({
             particleCount: 20,
             spread: 40,
             origin: {
-                x: event.clientX / window.innerWidth,
-                y: event.clientY / window.innerHeight
+                x: clickEvent.clientX / window.innerWidth,
+                y: clickEvent.clientY / window.innerHeight
             }
         });
+    }
+}
+
+function fireConfetti(options = {}) {
+    const count = Math.min(options.particleCount || 30, 80);
+    const origin = options.origin || { x: 0.5, y: 0.5 };
+    const colors = ['#ff6f91', '#72d6c9', '#92b8ef', '#ffa69e', '#25283d'];
+
+    for (let i = 0; i < count; i += 1) {
+        const bit = document.createElement('span');
+        bit.className = 'confetti-bit';
+        bit.style.left = `${origin.x * 100}%`;
+        bit.style.top = `${origin.y * 100}%`;
+        bit.style.background = colors[i % colors.length];
+        bit.style.setProperty('--dx', `${(Math.random() - 0.5) * 220}px`);
+        bit.style.setProperty('--dy', `${-40 - Math.random() * 170}px`);
+        bit.style.setProperty('--spin', `${Math.random() * 520 - 260}deg`);
+        document.body.appendChild(bit);
+        setTimeout(() => bit.remove(), 900);
     }
 }
 
 function showSuccessMessage() {
-    // Create a temporary success message
     const message = document.createElement('div');
-    message.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: linear-gradient(135deg, #93E1D8 0%, #B8D4E8 100%);
-        color: #2D3047;
-        padding: 15px 30px;
-        border-radius: 15px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-        z-index: 2000;
-        font-weight: 500;
-        animation: slideDown 0.3s ease;
-    `;
+    message.className = 'toast-message';
     message.textContent = '✨ Added to the garden!';
     document.body.appendChild(message);
 
@@ -394,30 +627,10 @@ function showSuccessMessage() {
     }, 2000);
 }
 
-// Add animations to CSS
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideDown {
-        from { transform: translate(-50%, -100%); opacity: 0; }
-        to { transform: translate(-50%, 0); opacity: 1; }
-    }
-    @keyframes slideUp {
-        from { transform: translate(-50%, 0); opacity: 1; }
-        to { transform: translate(-50%, -100%); opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
-
-// ===== ADMIN SETTINGS PANEL =====
-
-const ADMIN_PASSWORD = '7Maruthi';
-
-// Settings Modal Controls
 document.getElementById('settingsBtn').addEventListener('click', openSettings);
 document.getElementById('closeSettings').addEventListener('click', closeSettingsModal);
 document.getElementById('closeSettingsBtn').addEventListener('click', closeSettingsModal);
 
-// Click outside modal to close
 document.getElementById('settingsModal').addEventListener('click', (e) => {
     if (e.target.id === 'settingsModal') {
         closeSettingsModal();
@@ -438,7 +651,6 @@ function closeSettingsModal() {
     document.getElementById('settingsModal').classList.remove('active');
 }
 
-// Load current emoji list for removal
 function loadEmojiList() {
     const emojiList = document.getElementById('emojiList');
     emojiList.innerHTML = '';
@@ -446,100 +658,77 @@ function loadEmojiList() {
     Object.entries(categoryEmojis).forEach(([key, emoji]) => {
         const item = document.createElement('div');
         item.className = 'emoji-item';
-        item.innerHTML = `
-            <span>${emoji}</span>
-            <span>${key}</span>
-            <button onclick="removeEmoji('${key}')">Remove</button>
-        `;
+
+        const emojiText = document.createElement('span');
+        emojiText.textContent = emoji;
+
+        const keyText = document.createElement('span');
+        keyText.textContent = key;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', () => removeEmoji(key));
+
+        item.appendChild(emojiText);
+        item.appendChild(keyText);
+        item.appendChild(removeBtn);
         emojiList.appendChild(item);
     });
 }
 
-// Add new emoji
-let emojiPicker = null;
 document.getElementById('addEmojiBtn').addEventListener('click', () => {
-    const container = document.getElementById('emojiPickerContainer');
-
-    if (emojiPicker) {
-        container.innerHTML = '';
-        emojiPicker = null;
+    const selectedEmoji = prompt('Paste one emoji for the new category:');
+    if (!selectedEmoji) {
         return;
     }
 
-    emojiPicker = document.createElement('emoji-picker');
-    container.appendChild(emojiPicker);
+    const exists = Object.values(categoryEmojis).includes(selectedEmoji);
+    if (exists) {
+        alert('This emoji is already added!');
+        return;
+    }
 
-    emojiPicker.addEventListener('emoji-click', (event) => {
-        const selectedEmoji = event.detail.unicode;
+    const keyName = prompt('Enter a name for this category:');
+    if (!keyName) return;
+    const normalizedKey = keyName.trim().toLowerCase().replace(/\s+/g, '-');
 
-        // Check if emoji already exists
-        const exists = Object.values(categoryEmojis).includes(selectedEmoji);
-        if (exists) {
-            alert('This emoji is already added!');
-            return;
-        }
+    if (categoryEmojis[normalizedKey]) {
+        alert('This category name already exists!');
+        return;
+    }
 
-        // Generate a key name (use emoji as key or ask user)
-        const keyName = prompt('Enter a name for this category:');
-        if (!keyName) return;
+    categoryEmojis[normalizedKey] = selectedEmoji;
+    syncCategoryButtons();
+    setupCategoryButton(normalizedKey);
+    updateFilterChips();
+    loadEmojiList();
+    localStorage.setItem('categoryEmojis', JSON.stringify(categoryEmojis));
 
-        // Check if key already exists
-        if (categoryEmojis[keyName.toLowerCase()]) {
-            alert('This category name already exists!');
-            return;
-        }
-
-        // Add to categoryEmojis
-        categoryEmojis[keyName.toLowerCase()] = selectedEmoji;
-
-        // Add button to UI
-        addCategoryButton(keyName.toLowerCase(), selectedEmoji);
-
-        // Refresh emoji list
-        loadEmojiList();
-
-        // Save to localStorage
-        localStorage.setItem('categoryEmojis', JSON.stringify(categoryEmojis));
-
-        alert(`Added ${selectedEmoji} as "${keyName}"!`);
-        container.innerHTML = '';
-        emojiPicker = null;
-    });
+    alert(`Added ${selectedEmoji} as "${normalizedKey}"!`);
 });
 
-// Add category button dynamically
-function addCategoryButton(category, emoji) {
-    const categoryButtons = document.querySelector('.category-buttons');
-    const btn = document.createElement('button');
-    btn.className = 'category-btn';
-    btn.dataset.category = category;
-    btn.innerHTML = `<span class="emoji">${emoji}</span>`;
-    btn.addEventListener('click', () => {
-        openDrawingModal(category);
-    });
-    categoryButtons.appendChild(btn);
-}
-
-// Remove emoji
-window.removeEmoji = function(key) {
+function removeEmoji(key) {
     if (confirm(`Remove ${categoryEmojis[key]} (${key})?`)) {
         delete categoryEmojis[key];
-
-        // Remove button from UI
         const btn = document.querySelector(`[data-category="${key}"]`);
         if (btn) btn.remove();
-
-        // Refresh emoji list
+        updateFilterChips();
         loadEmojiList();
-
-        // Save to localStorage
         localStorage.setItem('categoryEmojis', JSON.stringify(categoryEmojis));
 
         alert('Emoji removed!');
     }
-};
+}
 
-// Clear entire garden
+function setupCategoryButton(category) {
+    const btn = document.querySelector(`[data-category="${category}"]`);
+    if (!btn || btn.dataset.bound === 'true') return;
+
+    btn.dataset.bound = 'true';
+    btn.addEventListener('click', () => openDrawingModal(category));
+}
+
 document.getElementById('clearGardenBtn').addEventListener('click', async () => {
     if (!confirm('Are you sure you want to DELETE ALL DRAWINGS? This cannot be undone!')) {
         return;
@@ -550,24 +739,22 @@ document.getElementById('clearGardenBtn').addEventListener('click', async () => 
     }
 
     try {
+        await connectFirebase();
+
         if (db) {
-            // Delete from Firebase
-            const q = query(collection(db, 'drawings'));
-            const querySnapshot = await getDocs(q);
+            const querySnapshot = await getDocs(collection(db, WALL_COLLECTION));
 
             const deletePromises = [];
             querySnapshot.forEach((docSnapshot) => {
-                deletePromises.push(deleteDoc(doc(db, 'drawings', docSnapshot.id)));
+                deletePromises.push(deleteDoc(doc(db, WALL_COLLECTION, docSnapshot.id)));
             });
 
             await Promise.all(deletePromises);
             console.log('All drawings deleted from Firebase');
         } else {
-            // Clear localStorage
             localStorage.removeItem('drawings');
         }
 
-        // Reload garden
         await loadDrawings();
         alert('Garden cleared successfully!');
     } catch (error) {
@@ -576,7 +763,6 @@ document.getElementById('clearGardenBtn').addEventListener('click', async () => 
     }
 });
 
-// Remove last N drawings
 document.getElementById('removeLastNBtn').addEventListener('click', async () => {
     const n = parseInt(document.getElementById('removeLastN').value);
 
@@ -590,28 +776,22 @@ document.getElementById('removeLastNBtn').addEventListener('click', async () => 
     }
 
     try {
+        const drawingsToRemove = allDrawings.slice(0, n);
+
         if (db) {
-            // Get last N drawings from Firebase
-            const q = query(collection(db, 'drawings'), orderBy('timestamp', 'desc'), limit(n));
-            const querySnapshot = await getDocs(q);
-
-            const deletePromises = [];
-            querySnapshot.forEach((docSnapshot) => {
-                deletePromises.push(deleteDoc(doc(db, 'drawings', docSnapshot.id)));
-            });
-
+            const deletePromises = drawingsToRemove
+                .filter((drawing) => drawing.id && !drawing.id.startsWith('local-'))
+                .map((drawing) => deleteDoc(doc(db, WALL_COLLECTION, drawing.id)));
             await Promise.all(deletePromises);
             console.log(`Last ${n} drawings deleted`);
         } else {
-            // Remove from localStorage
             let drawings = JSON.parse(localStorage.getItem('drawings') || '[]');
-            drawings.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            drawings = drawings.slice(n);
+            const removeIds = new Set(drawingsToRemove.map((drawing) => drawing.id));
+            drawings = drawings.filter((drawing, index) => !removeIds.has(drawing.id || `local-${index}`));
             localStorage.setItem('drawings', JSON.stringify(drawings));
+            loadLocalDrawings();
         }
 
-        // Reload garden
-        await loadDrawings();
         document.getElementById('removeLastN').value = '';
         alert(`Removed last ${n} drawing(s)!`);
     } catch (error) {
@@ -620,16 +800,14 @@ document.getElementById('removeLastNBtn').addEventListener('click', async () => 
     }
 });
 
-// Load saved emojis from localStorage on startup
-const savedEmojis = localStorage.getItem('categoryEmojis');
-if (savedEmojis) {
-    const loadedEmojis = JSON.parse(savedEmojis);
-    Object.assign(categoryEmojis, loadedEmojis);
+function loadSavedEmojis() {
+    const savedEmojis = localStorage.getItem('categoryEmojis');
+    if (!savedEmojis) return;
 
-    // Add any new buttons that aren't already in HTML
-    Object.entries(loadedEmojis).forEach(([key, emoji]) => {
-        if (!document.querySelector(`[data-category="${key}"]`)) {
-            addCategoryButton(key, emoji);
-        }
-    });
+    try {
+        const loadedEmojis = JSON.parse(savedEmojis);
+        Object.assign(categoryEmojis, loadedEmojis);
+    } catch (error) {
+        console.warn('Saved emoji categories could not be loaded:', error);
+    }
 }
