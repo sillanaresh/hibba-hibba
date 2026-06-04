@@ -640,14 +640,217 @@ function closePreview() {
 async function downloadPreviewSticker() {
     if (!currentPreviewDrawing?.imageData) return;
 
-    const blob = await (await fetch(currentPreviewDrawing.imageData)).blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const category = currentPreviewDrawing.category || 'garden';
-    link.href = url;
-    link.download = `fun-garden-${category}-sticker.png`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const button = document.getElementById('downloadSticker');
+    const previousText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Making Sticker...';
+
+    try {
+        const blob = await renderStickerDownload(currentPreviewDrawing);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const category = sanitizeFilenamePart(currentPreviewDrawing.category || 'garden');
+        link.href = url;
+        link.download = `fun-garden-${category}-sticker.png`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+        console.error('Sticker download failed', error);
+        alert('Could not make the sticker download. Please try again.');
+    } finally {
+        button.disabled = false;
+        button.textContent = previousText;
+    }
+}
+
+async function renderStickerDownload(drawing) {
+    const image = await loadImage(drawing.imageData);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = 640;
+    canvas.height = 760;
+
+    drawStickerCard(ctx, drawing);
+    drawStickerArtwork(ctx, image);
+    drawStickerLabel(ctx, drawing);
+
+    return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+            if (blob) {
+                resolve(blob);
+            } else {
+                reject(new Error('Canvas export returned no image data'));
+            }
+        }, 'image/png');
+    });
+}
+
+function drawStickerCard(ctx, drawing) {
+    ctx.clearRect(0, 0, 640, 760);
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(37, 40, 61, 0.2)';
+    ctx.shadowBlur = 34;
+    ctx.shadowOffsetY = 20;
+    roundedRect(ctx, 58, 76, 524, 604, 34);
+    ctx.fillStyle = '#fffdf8';
+    ctx.fill();
+    ctx.restore();
+
+    roundedRect(ctx, 58, 76, 524, 604, 34);
+    ctx.fillStyle = '#fffdf8';
+    ctx.fill();
+    ctx.strokeStyle = '#eadfcf';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(320, 78);
+    ctx.rotate(-0.045);
+    roundedRect(ctx, -88, -22, 176, 44, 10);
+    ctx.fillStyle = 'rgba(255, 214, 229, 0.95)';
+    ctx.fill();
+    ctx.restore();
+
+    roundedRect(ctx, 106, 154, 428, 392, 26);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = '#f0e3d4';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const emoji = getCategoryEmoji(drawing);
+    ctx.save();
+    ctx.shadowColor = 'rgba(37, 40, 61, 0.12)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 5;
+    roundedRect(ctx, 98, 124, 74, 74, 24);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.restore();
+
+    ctx.font = '40px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(emoji, 135, 161);
+}
+
+function drawStickerArtwork(ctx, image) {
+    const bounds = getImageContentBounds(image);
+    const source = bounds || { x: 0, y: 0, width: image.naturalWidth || image.width, height: image.naturalHeight || image.height };
+    const target = containRect(source.width, source.height, 150, 192, 340, 300);
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(image, source.x, source.y, source.width, source.height, target.x, target.y, target.width, target.height);
+    ctx.restore();
+}
+
+function drawStickerLabel(ctx, drawing) {
+    const category = drawing.category || 'garden';
+    ctx.fillStyle = '#25283d';
+    ctx.font = '700 28px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(`${category} sticker`, 320, 608);
+
+    ctx.fillStyle = '#667085';
+    ctx.font = '18px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('Fun Garden', 320, 640);
+}
+
+function getImageContentBounds(image) {
+    const width = image.naturalWidth || image.width;
+    const height = image.naturalHeight || image.height;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    canvas.width = width;
+    canvas.height = height;
+    ctx.drawImage(image, 0, 0);
+
+    const pixels = ctx.getImageData(0, 0, width, height).data;
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+            const alpha = pixels[((y * width + x) * 4) + 3];
+            if (alpha > 12) {
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x);
+                maxY = Math.max(maxY, y);
+            }
+        }
+    }
+
+    if (maxX < minX || maxY < minY) return null;
+
+    const padding = 8;
+    const left = Math.max(0, minX - padding);
+    const top = Math.max(0, minY - padding);
+    const right = Math.min(width, maxX + padding + 1);
+    const bottom = Math.min(height, maxY + padding + 1);
+
+    return {
+        x: left,
+        y: top,
+        width: right - left,
+        height: bottom - top
+    };
+}
+
+function containRect(sourceWidth, sourceHeight, x, y, width, height) {
+    const scale = Math.min(width / sourceWidth, height / sourceHeight);
+    const targetWidth = sourceWidth * scale;
+    const targetHeight = sourceHeight * scale;
+
+    return {
+        x: x + ((width - targetWidth) / 2),
+        y: y + ((height - targetHeight) / 2),
+        width: targetWidth,
+        height: targetHeight
+    };
+}
+
+function roundedRect(ctx, x, y, width, height, radius) {
+    const safeRadius = Math.min(radius, width / 2, height / 2);
+
+    ctx.beginPath();
+    ctx.moveTo(x + safeRadius, y);
+    ctx.lineTo(x + width - safeRadius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+    ctx.lineTo(x + width, y + height - safeRadius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+    ctx.lineTo(x + safeRadius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+    ctx.lineTo(x, y + safeRadius);
+    ctx.quadraticCurveTo(x, y, x + safeRadius, y);
+    ctx.closePath();
+}
+
+function loadImage(src) {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = src;
+    });
+}
+
+function sanitizeFilenamePart(value) {
+    return String(value)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'garden';
 }
 
 function getCategoryEmoji(drawing) {
